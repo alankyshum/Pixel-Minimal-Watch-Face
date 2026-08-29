@@ -706,8 +706,8 @@
             height="112">
             <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 0 ? 165 : 0" />
             <DefaultProviderPolicy
-                primaryProvider="com.alanshum.pixelminimal.bridge/com.alanshum.pixelminimal.bridge.CalendarComplicationService"
-                primaryProviderType="LONG_TEXT"
+                primaryProvider="com.weartools.phonebattcomp/com.weartools.phonebattcomp.complication.MobileBatteryComplicationService"
+                primaryProviderType="SHORT_TEXT"
                 defaultSystemProvider="DAY_AND_DATE"
                 defaultSystemProviderType="SHORT_TEXT"/>
             <!-- The 402x112 rectangular hit area encloses the finite 410px top arc. -->
@@ -757,8 +757,8 @@
             </Complication>
             <Complication type="LONG_TEXT">
                 <Condition>
-                        <Expressions>
-                            <Expression name="notificationsRow"><![CDATA[[COMPLICATION.TEXT] == "---"]]></Expression>
+                    <Expressions>
+                        <Expression name="notificationsRow"><![CDATA[[COMPLICATION.TEXT] == "---"]]></Expression>
                     </Expressions>
                     <Compare expression="notificationsRow">
                         <PartImage width="256" height="32"  x="73" y="40" tintColor="[CONFIGURATION.themeColor.1]">
@@ -787,7 +787,7 @@
             width="256"
             height="46">
             <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 0 ? 165 : 0" />
-            <DefaultProviderPolicy primaryProvider="com.alanshum.pixelminimal.bridge/com.alanshum.pixelminimal.bridge.PhoneBatteryComplicationService" primaryProviderType="SHORT_TEXT" defaultSystemProvider="DAY_AND_DATE" defaultSystemProviderType="SHORT_TEXT"/>
+            <DefaultProviderPolicy defaultSystemProvider="DAY_AND_DATE" defaultSystemProviderType="SHORT_TEXT"/>
             <BoundingRoundBox cornerRadius="15" width="258" height="48" x="-1" y="-1" />
             <Complication type="SHORT_TEXT">
                 <Condition>
