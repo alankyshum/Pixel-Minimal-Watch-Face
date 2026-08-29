@@ -2,3 +2,7 @@
 /local.properties
 /.idea
 watchface/build
+**/build
+*.keystore
+*.jks
+signing.properties

@@ -1,0 +1,18 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-feature android:name="android.hardware.type.watch" android:required="true" />
+  <application android:label="Pixel Minimal Bridge" android:theme="@style/AppTheme" android:icon="@drawable/bridge_icon">
+    <meta-data android:name="com.google.android.wearable.standalone" android:value="false" />
+    <meta-data android:name="com.google.android.wearable.capability" android:resource="@xml/wear" />
+    <service android:name=".BridgeListenerService" android:exported="true" android:label="Pixel Minimal data listener">
+      <intent-filter><action android:name="com.google.android.gms.wearable.BIND_LISTENER" /></intent-filter>
+    </service>
+    <service android:name=".PhoneBatteryComplicationService" android:exported="true" android:label="Pixel Minimal phone battery" android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+      <intent-filter><action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" /></intent-filter>
+      <meta-data android:name="android.support.wearable.complications.SUPPORTED_TYPES" android:value="SHORT_TEXT" />
+    </service>
+    <service android:name=".CalendarComplicationService" android:exported="true" android:label="Pixel Minimal calendar" android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+      <intent-filter><action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" /></intent-filter>
+      <meta-data android:name="android.support.wearable.complications.SUPPORTED_TYPES" android:value="SHORT_TEXT,LONG_TEXT" />
+    </service>
+  </application>
+</manifest>

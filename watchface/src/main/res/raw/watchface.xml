@@ -706,8 +706,8 @@
             height="112">
             <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 0 ? 165 : 0" />
             <DefaultProviderPolicy
-                primaryProvider="com.weartools.phonebattcomp/com.weartools.phonebattcomp.complication.MobileBatteryComplicationService"
-                primaryProviderType="SHORT_TEXT"
+                primaryProvider="com.alanshum.pixelminimal.bridge/com.alanshum.pixelminimal.bridge.CalendarComplicationService"
+                primaryProviderType="LONG_TEXT"
                 defaultSystemProvider="DAY_AND_DATE"
                 defaultSystemProviderType="SHORT_TEXT"/>
             <!-- The 402x112 rectangular hit area encloses the finite 410px top arc. -->
@@ -745,10 +745,11 @@
                     </Compare>
                     <Default>
                         <Group name="top_short_text" width="402" height="112" x="0" y="0">
+                            <!-- Keep all three top sizes on the same ±55° arc; its endpoints remain inside this slot. -->
                             <ListConfiguration id="topComplicationFontSize">
-                                <ListOption id="18"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="302" endAngle="58" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="18"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
-                                <ListOption id="22"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="302" endAngle="58" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="22"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
-                                <ListOption id="26"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="302" endAngle="58" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="26"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                                <ListOption id="18"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="305" endAngle="55" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="18"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                                <ListOption id="22"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="305" endAngle="55" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="22"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                                <ListOption id="26"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="305" endAngle="55" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="26"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
                             </ListConfiguration>
                         </Group>
                     </Default>
@@ -756,11 +757,8 @@
             </Complication>
             <Complication type="LONG_TEXT">
                 <Condition>
-                    <Expressions>
-                        <Expression name="notificationsRow"><![CDATA[[COMPLICATION.TEXT] == "---"]]></Expression>
-                        <Expression name="textIconTitle"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null && [COMPLICATION.TITLE] != null]]></Expression>
-                        <Expression name="textTitle"><![CDATA[[COMPLICATION.TITLE] != null]]></Expression>
-                        <Expression name="textIcon"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null]]></Expression>
+                        <Expressions>
+                            <Expression name="notificationsRow"><![CDATA[[COMPLICATION.TEXT] == "---"]]></Expression>
                     </Expressions>
                     <Compare expression="notificationsRow">
                         <PartImage width="256" height="32"  x="73" y="40" tintColor="[CONFIGURATION.themeColor.1]">
@@ -769,10 +767,11 @@
                     </Compare>
                     <Default>
                         <Group name="top_long_text" width="402" height="112" x="0" y="0">
+                            <!-- Keep all three top sizes on the same ±55° arc; its endpoints remain inside this slot. -->
                             <ListConfiguration id="topComplicationFontSize">
-                                <ListOption id="18"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="302" endAngle="58" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="18"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
-                                <ListOption id="22"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="302" endAngle="58" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="22"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
-                                <ListOption id="26"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="302" endAngle="58" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="26"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                                <ListOption id="18"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="305" endAngle="55" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="18"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                                <ListOption id="22"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="305" endAngle="55" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="22"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                                <ListOption id="26"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="305" endAngle="55" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="26"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
                             </ListConfiguration>
                         </Group>
                     </Default>
@@ -788,7 +787,7 @@
             width="256"
             height="46">
             <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 0 ? 165 : 0" />
-            <DefaultProviderPolicy defaultSystemProvider="DAY_AND_DATE" defaultSystemProviderType="SHORT_TEXT"/>
+            <DefaultProviderPolicy primaryProvider="com.alanshum.pixelminimal.bridge/com.alanshum.pixelminimal.bridge.PhoneBatteryComplicationService" primaryProviderType="SHORT_TEXT" defaultSystemProvider="DAY_AND_DATE" defaultSystemProviderType="SHORT_TEXT"/>
             <BoundingRoundBox cornerRadius="15" width="258" height="48" x="-1" y="-1" />
             <Complication type="SHORT_TEXT">
                 <Condition>
