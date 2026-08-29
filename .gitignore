@@ -6,3 +6,14 @@ watchface/build
 *.keystore
 *.jks
 signing.properties
+
+# Private runtime evidence and device data must never enter a public history.
+/evidence/
+*.log
+*.device-log
+*.pem
+*.key
+*.p12
+*.properties.local
+__pycache__/
+*.py[cod]
