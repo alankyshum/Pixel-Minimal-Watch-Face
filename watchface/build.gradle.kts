@@ -5,17 +5,17 @@ plugins {
 }
 
 android {
-    namespace = "com.amoledwatchfaces.pixelMinimal"
+    namespace = "com.alanshum.pixelminimal.longtext"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.amoledwatchfaces.pixelMinimal"
+        applicationId = "com.alanshum.pixelminimal.longtext"
         minSdk = 34
         targetSdk = 34
         versionCode = 10000002
         versionName = "1.0.2"
 
-        manifestPlaceholders["publisher"] = "AndroidStudioKoala-2024.1.2"
+        manifestPlaceholders["publisher"] = "Alan Shum (Local Personal Use)"
     }
 
     buildTypes {
