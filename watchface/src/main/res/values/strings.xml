@@ -18,6 +18,12 @@
     <string name="slot_2">Top Box Slot</string>
     <string name="slot_3">Bottom Box Slot</string>
 
+    <string name="id_top_complication_font_size">Top complication font size</string>
+    <string name="id_bottom_complication_font_size">Bottom complication font size</string>
+    <string name="id_complication_font_size_small">Small</string>
+    <string name="id_complication_font_size_medium">Medium</string>
+    <string name="id_complication_font_size_large">Large</string>
+
     <string name="id_material_theme">Material Theme</string>
     <string name="id_time_color">Digital Clock Color</string>
 
