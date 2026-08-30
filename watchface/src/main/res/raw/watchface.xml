@@ -773,13 +773,13 @@
                 align="CENTER" x="0" y="75"
                 width="250" height="180">
                 <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.hollowAOD] == 0 ? 255 : 0" />
-                <Font color="#fafafa" size="128" family="orbitron_wght" weight="MEDIUM"/>
+                <Font color="#fafafa" size="112" family="orbitron_wght" weight="MEDIUM"/>
             </TimeText>
             <TimeText format="mm" hourFormat="SYNC_TO_DEVICE"
                 align="CENTER" x="0" y="191"
                 width="250" height="180">
                 <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.hollowAOD] == 0 ? 255 : 0" />
-                <Font color="#fafafa" size="128" family="orbitron_wght" weight="MEDIUM"/>
+                <Font color="#fafafa" size="112" family="orbitron_wght" weight="MEDIUM"/>
             </TimeText>
             <!-- Hollow -->
             <TimeText format="hh" hourFormat="SYNC_TO_DEVICE"
