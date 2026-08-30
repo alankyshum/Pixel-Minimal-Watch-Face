@@ -11,7 +11,7 @@
 
     <string name="id_hollow_aod">AOD Clock</string>
     <string name="id_hollow_aod_0">Solid</string>
-    <string name="id_hollow_aod_1">Outlined</string>
+    <string name="id_hollow_aod_1">Solid (formerly Outlined)</string>
 
     <string name="slot_0">Left Circle Slot</string>
     <string name="slot_1">Right Circle Slot</string>
