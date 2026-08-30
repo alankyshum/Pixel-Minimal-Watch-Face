@@ -7,7 +7,7 @@ This is a configurable derivative of an upstream WFF2 watch face for Wear OS 5+.
 - **Center:** large digital clock.
 - **Top (slot 2):** the third-party [Phone Battery Complication](https://play.google.com/store/apps/details?id=com.weartools.phonebattcomp) Event Timer complication. Its event/title and time-until or remaining information are supplied by that provider.
 - **Bottom (slot 3):** a Calendar Pro `LONG_TEXT` next-event complication. In the observed setup it supplies next-event text with time/remaining information; the face displays the provider's text and title and does not guarantee separate start and end times.
-- **Left (slot 0):** system **Day & Date** `SHORT_TEXT`, customized to omit the provider icon and show centered `date/month` and weekday lines.
+- **Left (slot 0):** system **Day & Date** `SHORT_TEXT`, customized to omit the provider icon and show centered `MM/DD` and uppercase English weekday lines.
 - **Right (slot 1):** timer/countdown complication.
 
 Slots remain configurable in the Wear OS complication editor. Phone Battery Complication and Calendar Pro are third-party apps and are **not bundled** here. The optional `phone-companion`, `watch-provider`, and `shared-protocol` modules are local bridge modules; they are separate from both third-party providers and are not required for the assignments above. See [LOCAL_ARCHITECTURE.md](LOCAL_ARCHITECTURE.md) for their local-only design.
@@ -21,10 +21,10 @@ Slots remain configurable in the Wear OS complication editor. Phone Battery Comp
 
 This checkout has no release signing setup. Compiled APKs are not distributed by this repository.
 
-## Font mapping (v1.0.11)
+## Font mapping (local v1.0.12 experiment)
 
-- Center clock, left Day & Date, and right Timer use the bundled Orbitron font; the clock remains 112px and the circular-complication text is scaled for fit.
-- Top and bottom text complications (slots 2 and 3) use the bundled Noto Sans HK variable font, including their combined-battery layouts, while retaining the existing 18/22/26px font-size options and long-text behavior. Center, left, and right remain on Orbitron.
+- Center clock, left date display, and right Timer use the bundled Orbitron font; the left display is provider-independent `MM/DD` plus uppercase English weekday, the clock remains 112px, and the circular-complication text is scaled for fit.
+- Top and bottom text complications (slots 2 and 3) use the Wear OS system font with `letterSpacing="-0.05"`, including their combined-battery layouts, while retaining the existing 18/22/26px font-size options and long-text behavior. Center, left, and right remain on Orbitron.
 
 ## Configuration inventory
 
@@ -84,4 +84,4 @@ The tracked pre-commit hook runs the `--check` command. It is intentionally acti
 
 This repository is **source-available, not OSI open source**. The supplied written upstream permission is quoted verbatim in [UPSTREAM_PERMISSION.md](UPSTREAM_PERMISSION.md). It is interpreted narrowly as permission for public source hosting and GitHub forking for personal use. It does not grant or claim commercial rights, sublicensing, general redistribution, or APK/release distribution. Downstream users should seek clarification from the upstream rights holder for rights beyond that quoted permission. This is practical compliance information, not legal advice.
 
-All four uncleared font files were removed. The bundled unmodified `orbitron_wght.ttf` and `noto_sans_hk_wght.ttf` fonts are licensed under the SIL Open Font License 1.1; see [OFL.txt](OFL.txt), [NOTO_SANS_HK_OFL.txt](NOTO_SANS_HK_OFL.txt), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). No blanket license applies to the remaining upstream-derived material.
+All four uncleared font files were removed. The bundled unmodified `orbitron_wght.ttf` font is licensed under the SIL Open Font License 1.1; see [OFL.txt](OFL.txt) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). No blanket license applies to the remaining upstream-derived material.
