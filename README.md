@@ -1,6 +1,6 @@
 # Pixel Minimal Long Text (Local)
 
-This is a local, configurable derivative of an upstream WFF2 watch face for Wear OS 5+. It is maintained for personal use, not a published redistribution.
+This is a configurable derivative of an upstream WFF2 watch face for Wear OS 5+. It is source-available for personal use and GitHub forking under the written upstream permission recorded in [UPSTREAM_PERMISSION.md](UPSTREAM_PERMISSION.md).
 
 ![Sanitized and annotated v1.0.6 runtime example](docs/images/v106-sanitized-annotated.png)
 
@@ -16,14 +16,14 @@ This is a local, configurable derivative of an upstream WFF2 watch face for Wear
 
 Slots remain configurable in the Wear OS complication editor. Phone Battery Complication and Calendar Pro are third-party apps and are **not bundled** here. The optional `phone-companion`, `watch-provider`, and `shared-protocol` modules are local bridge modules; they are separate from both third-party providers and are not required for the assignments above. See [LOCAL_ARCHITECTURE.md](LOCAL_ARCHITECTURE.md) for their local-only design.
 
-## Build, install, and personal use
+## Build and personal use
 
 1. Open the project in Android Studio with an installed Wear OS SDK, or run `bash ./gradlew :watchface:assembleDebug`.
-2. Install the resulting debug APK to a compatible Wear OS 5+ watch using Android Studio or `adb`.
+2. Install the resulting debug APK to a compatible Wear OS 5+ watch using Android Studio or `adb` for your own personal use.
 3. Select **Pixel Minimal Long Text (Local)** and set the four complication slots in the watch/phone complication editor. Install and configure the third-party provider apps separately if you use them.
 4. For the optional local bridge, build/install its phone and watch debug APKs on their respective devices; its current signing/deployment constraints are documented in [LOCAL_ARCHITECTURE.md](LOCAL_ARCHITECTURE.md).
 
-This checkout is intended for local personal use. It has no release signing setup; do not treat debug outputs as a distributable release.
+This checkout has no release signing setup. Compiled APKs are not distributed by this repository.
 
 ## Configuration inventory
 
@@ -79,6 +79,8 @@ python3 tools/generate_readme_config.py --check
 
 The tracked pre-commit hook runs the `--check` command. It is intentionally activated only after the explicit local `core.hooksPath` command above.
 
-## Licensing and publication status
+## Permission, licensing, and publication status
 
-**Not cleared for redistribution.** The upstream source has no declared license, and the bundled Google Sans-derived font files have unverified redistribution rights. Do not publish, upload release artifacts, or claim this repository is open-source until the upstream license and font redistribution permission have been independently confirmed.
+This repository is **source-available, not OSI open source**. The supplied written upstream permission is quoted verbatim in [UPSTREAM_PERMISSION.md](UPSTREAM_PERMISSION.md). It is interpreted narrowly as permission for public source hosting and GitHub forking for personal use. It does not grant or claim commercial rights, sublicensing, general redistribution, or APK/release distribution. Downstream users should seek clarification from the upstream rights holder for rights beyond that quoted permission. This is practical compliance information, not legal advice.
+
+All four uncleared font files were removed. The bundled unmodified `orbitron_wght.ttf` font is licensed under the SIL Open Font License 1.1; see [OFL.txt](OFL.txt) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). No blanket license applies to the remaining upstream-derived material.
