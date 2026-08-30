@@ -21,6 +21,11 @@ Slots remain configurable in the Wear OS complication editor. Phone Battery Comp
 
 This checkout has no release signing setup. Compiled APKs are not distributed by this repository.
 
+## Font mapping (v1.0.10)
+
+- Center clock, left Day & Date, and right Timer use the bundled Orbitron font; the clock remains 112px and the circular-complication text is scaled for fit.
+- Top and bottom text complications use the WFF `SYNC_TO_DEVICE` system-font sentinel, including their combined-battery layouts, while retaining the existing 18/22/26px font-size options and long-text behavior.
+
 ## Configuration inventory
 
 This section is generated from `watchface.xml` and `strings.xml`. Do not edit it manually: run `python3 tools/generate_readme_config.py` after changing watch-face configuration resources. CI and the repository hook use `--check` to reject stale content.
