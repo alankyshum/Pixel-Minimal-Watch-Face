@@ -5,7 +5,8 @@ This is a configurable derivative of an upstream WFF2 watch face for Wear OS 5+.
 ## Current layout and assignments
 
 - **Center:** large digital clock.
-- **Top (slot 2):** the third-party [Phone Battery Complication](https://play.google.com/store/apps/details?id=com.weartools.phonebattcomp) Event Timer complication. Its event/title and time-until or remaining information are supplied by that provider.
+- **Top outer arc (slot 2):** the third-party [Phone Battery Complication](https://play.google.com/store/apps/details?id=com.weartools.phonebattcomp) Event Timer complication. Its normal text behavior is retained; its combined-battery presentation follows the same outer arc so it remains inside that slot's selectable/cropped arc shape, preserving watch and companion/phone percentages as plain circular text separated by a centered dot, without inline watch/phone icons because inline images are not used on the circular path. Special top notification rows use a compact monochromatic icon at the arc apex.
+- **Top inner arc (slot 4):** an independent, initially unassigned text-only `SHORT_TEXT` or `LONG_TEXT` complication. `SHORT_TEXT` displays provider text only; `LONG_TEXT` displays provider text followed by its title (for example, `Now > 11:15`). Its narrower circular-text arc is below slot 2 and above the clock, leaving the left and right circular complication areas clear.
 - **Bottom (slot 3):** a Calendar Pro `LONG_TEXT` next-event complication. In the observed setup it supplies next-event text with time/remaining information; the face displays the provider's text and title and does not guarantee separate start and end times.
 - **Left (slot 0):** system **Day & Date** `SHORT_TEXT`, customized to omit the provider icon and show centered `MM/DD` and uppercase English weekday lines.
 - **Right (slot 1):** timer/countdown complication.
@@ -16,7 +17,7 @@ Slots remain configurable in the Wear OS complication editor. Phone Battery Comp
 
 1. Open the project in Android Studio with an installed Wear OS SDK, or run `bash ./gradlew :watchface:assembleDebug`.
 2. Install the resulting debug APK to a compatible Wear OS 5+ watch using Android Studio or `adb` for your own personal use.
-3. Select **Pixel Minimal Long Text (Local)** and set the four complication slots in the watch/phone complication editor. Install and configure the third-party provider apps separately if you use them.
+3. Select **Pixel Minimal Long Text (Local)** and set the five complication slots in the watch/phone complication editor. Install and configure the third-party provider apps separately if you use them.
 4. For the optional local bridge, build/install its phone and watch debug APKs on their respective devices; its current signing/deployment constraints are documented in [LOCAL_ARCHITECTURE.md](LOCAL_ARCHITECTURE.md).
 
 This checkout has no release signing setup. Compiled APKs are not distributed by this repository.
@@ -24,11 +25,15 @@ This checkout has no release signing setup. Compiled APKs are not distributed by
 ## Font mapping (local v1.0.14 crash fix)
 
 - Center clock, left date display, and right Timer use the bundled Orbitron font; the left display is provider-independent `MM/DD` plus uppercase English weekday, the clock remains 112px, and the circular-complication text is scaled for fit.
-- Top and bottom text complications (slots 2 and 3) use the Wear OS system font with device-proven `letterSpacing="-0.05"` (−0.05em), including their combined-battery layouts, while retaining the existing 18/22/26px font-size options and long-text behavior. Center, left, and right remain on Orbitron.
+- Top and bottom text complications (slots 2, 4, and 3) use the Wear OS system font with device-proven `letterSpacing="-0.05"` (−0.05em), including their combined-battery layouts where applicable, while retaining the existing 18/22/26px font-size options and long-text behavior. Slot 4 is text-only and shares slot 2's top font-size configuration. Center, left, and right remain on Orbitron.
 
 ### v1.0.14 release note
 
 Replace v1.0.13: its literal `-0.5em` tracking could produce zero or negative text-bitmap widths in the device renderer and cause runtime crashes. v1.0.14 restores the device-proven safe `-0.05em` correction. The center Orbitron MEDIUM 112px clock, zero-padded `MM/DD` plus uppercase English weekday Orbitron 24/21px left date, right Timer Orbitron 24/26/22/27/22/26/26px sequence, and top/bottom system-font sizes are otherwise retained.
+
+### v1.0.15 release note
+
+Adds an independent second top circular text complication (slot 4). Its `LONG_TEXT` rendering includes both provider text and title, fixing Calendar Pro's observed `Now > 11:15` presentation while keeping the existing top slot's battery and notification behavior inside its circular arc.
 
 ## Configuration inventory
 
@@ -56,6 +61,7 @@ This section is generated from `watchface.xml` and `strings.xml`. Do not edit it
 | `1` | Right Circle Slot | 130 × 130 at 315,160 | `RANGED_VALUE SHORT_TEXT MONOCHROMATIC_IMAGE SMALL_IMAGE EMPTY` | `defaultSystemProvider`=TIMER, `defaultSystemProviderType`=SHORT_TEXT |
 | `2` | Top Box Slot | 402 × 112 at 24,0 | `SHORT_TEXT LONG_TEXT EMPTY` | `defaultSystemProvider`=DAY_AND_DATE, `defaultSystemProviderType`=SHORT_TEXT, `primaryProvider`=com.weartools.phonebattcomp/com.weartools.phonebattcomp.complication.MobileBatteryComplicationService, `primaryProviderType`=SHORT_TEXT |
 | `3` | Bottom Box Slot | 256 × 46 at 97,355 | `SHORT_TEXT LONG_TEXT EMPTY` | `defaultSystemProvider`=DAY_AND_DATE, `defaultSystemProviderType`=SHORT_TEXT |
+| `4` | Second Top Text Slot | 256 × 80 at 97,57 | `SHORT_TEXT LONG_TEXT EMPTY` | — |
 
 ### Flavors
 
@@ -81,7 +87,7 @@ git config core.hooksPath .githooks
 python3 tools/generate_readme_config.py
 python3 tools/generate_readme_config.py --check
 
-# Verify the fixed v1.0.14 font mapping and non-font WFF invariants
+# Verify the fixed font mapping and non-font WFF invariants
 python3 tools/verify_font_mapping.py
 ```
 

@@ -17,6 +17,7 @@
     <string name="slot_1">Right Circle Slot</string>
     <string name="slot_2">Top Box Slot</string>
     <string name="slot_3">Bottom Box Slot</string>
+    <string name="slot_4">Second Top Text Slot</string>
 
     <string name="id_top_complication_font_size">Top complication font size</string>
     <string name="id_bottom_complication_font_size">Bottom complication font size</string>

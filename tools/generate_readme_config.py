@@ -15,6 +15,7 @@ WATCHFACE = ROOT / "watchface/src/main/res/raw/watchface.xml"
 STRINGS = ROOT / "watchface/src/main/res/values/strings.xml"
 BEGIN = "<!-- BEGIN GENERATED CONFIGURATION INVENTORY -->"
 END = "<!-- END GENERATED CONFIGURATION INVENTORY -->"
+POLICY_OPTIONAL_SLOT_IDS = {"4"}
 
 
 def fail(message: str) -> None:
@@ -91,9 +92,9 @@ def inventory() -> str:
             fail("complication slot has duplicate/missing ID or label")
         seen_slots.add(slot_id)
         policy = slot.find("DefaultProviderPolicy")
-        if policy is None:
+        if policy is None and slot_id not in POLICY_OPTIONAL_SLOT_IDS:
             fail(f"slot {slot_id!r} has no DefaultProviderPolicy")
-        policy_text = ", ".join(f"`{key}`={value}" for key, value in sorted(policy.attrib.items()))
+        policy_text = "—" if policy is None else ", ".join(f"`{key}`={value}" for key, value in sorted(policy.attrib.items()))
         bounds = " × ".join(slot.get(key, "?") for key in ("width", "height")) + " at " + ",".join(slot.get(key, "?") for key in ("x", "y"))
         lines.append(f"| `{slot_id}` | {label(resources, display_name, f'slot {slot_id}')} | {bounds} | `{slot.get('supportedTypes', '')}` | {policy_text} |")
 

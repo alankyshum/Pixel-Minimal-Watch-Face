@@ -62,6 +62,18 @@ class GenerateReadmeConfigTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "malformed XML"):
             generator.inventory()
 
+    def test_allows_only_slot_4_to_be_unassigned(self) -> None:
+        source = generator.WATCHFACE.read_text().replace("slotId='0'", "slotId='4'").replace("<DefaultProviderPolicy/>", "")
+        generator.WATCHFACE.write_text(source)
+        rendered = generator.replace_generated(generator.README.read_text(), generator.inventory())
+        self.assertIn("| `4` | Slot | 1 × 1 at 0,0 | `EMPTY` | — |", rendered)
+
+    def test_rejects_other_unassigned_slot(self) -> None:
+        source = generator.WATCHFACE.read_text().replace("<DefaultProviderPolicy/>", "")
+        generator.WATCHFACE.write_text(source)
+        with self.assertRaisesRegex(ValueError, "slot '0' has no DefaultProviderPolicy"):
+            generator.inventory()
+
     def test_rejects_missing_or_duplicate_markers(self) -> None:
         with self.assertRaisesRegex(ValueError, "exactly one"):
             generator.replace_generated(generator.BEGIN + generator.BEGIN + generator.END, "content\n")
