@@ -80,6 +80,9 @@ git config core.hooksPath .githooks
 # Refresh/check this README's generated inventory
 python3 tools/generate_readme_config.py
 python3 tools/generate_readme_config.py --check
+
+# Verify the fixed v1.0.14 font mapping and non-font WFF invariants
+python3 tools/verify_font_mapping.py
 ```
 
 The tracked pre-commit hook runs the `--check` command. It is intentionally activated only after the explicit local `core.hooksPath` command above.
@@ -88,4 +91,4 @@ The tracked pre-commit hook runs the `--check` command. It is intentionally acti
 
 This repository is **source-available, not OSI open source**. The supplied written upstream permission is quoted verbatim in [UPSTREAM_PERMISSION.md](UPSTREAM_PERMISSION.md). It is interpreted narrowly as permission for public source hosting and GitHub forking for personal use. It does not grant or claim commercial rights, sublicensing, general redistribution, or APK/release distribution. Downstream users should seek clarification from the upstream rights holder for rights beyond that quoted permission. This is practical compliance information, not legal advice.
 
-All four uncleared font files were removed. The bundled unmodified `orbitron_wght.ttf` font is licensed under the SIL Open Font License 1.1; see [OFL.txt](OFL.txt) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). No blanket license applies to the remaining upstream-derived material.
+The sole bundled font is the unmodified `orbitron_wght.ttf`, licensed under the SIL Open Font License 1.1; see [OFL.txt](OFL.txt) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). No blanket license applies to the remaining upstream-derived material.

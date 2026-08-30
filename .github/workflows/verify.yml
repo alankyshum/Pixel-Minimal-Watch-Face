@@ -16,6 +16,8 @@ jobs:
         run: python3 tools/generate_readme_config.py --check
       - name: Test configuration inventory generator
         run: python3 -m unittest tools/test_generate_readme_config.py
+      - name: Verify fixed font mapping
+        run: python3 tools/verify_font_mapping.py
       - name: Parse watch-face resource XML
         run: python3 -c "import xml.etree.ElementTree as ET; ET.parse('watchface/src/main/res/raw/watchface.xml'); ET.parse('watchface/src/main/res/values/strings.xml')"
       - name: Build debug watch face
