@@ -21,10 +21,10 @@ Slots remain configurable in the Wear OS complication editor. Phone Battery Comp
 
 This checkout has no release signing setup. Compiled APKs are not distributed by this repository.
 
-## Font mapping (v1.0.10)
+## Font mapping (v1.0.11)
 
 - Center clock, left Day & Date, and right Timer use the bundled Orbitron font; the clock remains 112px and the circular-complication text is scaled for fit.
-- Top and bottom text complications use the WFF `SYNC_TO_DEVICE` system-font sentinel, including their combined-battery layouts, while retaining the existing 18/22/26px font-size options and long-text behavior.
+- Top and bottom text complications (slots 2 and 3) use the bundled Noto Sans HK variable font, including their combined-battery layouts, while retaining the existing 18/22/26px font-size options and long-text behavior. Center, left, and right remain on Orbitron.
 
 ## Configuration inventory
 
@@ -84,4 +84,4 @@ The tracked pre-commit hook runs the `--check` command. It is intentionally acti
 
 This repository is **source-available, not OSI open source**. The supplied written upstream permission is quoted verbatim in [UPSTREAM_PERMISSION.md](UPSTREAM_PERMISSION.md). It is interpreted narrowly as permission for public source hosting and GitHub forking for personal use. It does not grant or claim commercial rights, sublicensing, general redistribution, or APK/release distribution. Downstream users should seek clarification from the upstream rights holder for rights beyond that quoted permission. This is practical compliance information, not legal advice.
 
-All four uncleared font files were removed. The bundled unmodified `orbitron_wght.ttf` font is licensed under the SIL Open Font License 1.1; see [OFL.txt](OFL.txt) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). No blanket license applies to the remaining upstream-derived material.
+All four uncleared font files were removed. The bundled unmodified `orbitron_wght.ttf` and `noto_sans_hk_wght.ttf` fonts are licensed under the SIL Open Font License 1.1; see [OFL.txt](OFL.txt), [NOTO_SANS_HK_OFL.txt](NOTO_SANS_HK_OFL.txt), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). No blanket license applies to the remaining upstream-derived material.
