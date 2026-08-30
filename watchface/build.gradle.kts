@@ -12,8 +12,8 @@ android {
         applicationId = "com.alanshum.pixelminimal.longtext"
         minSdk = 34
         targetSdk = 34
-        versionCode = 10000014
-        versionName = "1.0.14"
+        versionCode = 10000015
+        versionName = "1.0.15"
 
         manifestPlaceholders["publisher"] = "Alan Shum (Local Personal Use)"
     }
