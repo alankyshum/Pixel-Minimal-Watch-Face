@@ -15,4 +15,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "Pixel Minimal"
 include(":watchface")
- 
+include(":shared-protocol")
+include(":watch-provider")
+include(":phone-companion")

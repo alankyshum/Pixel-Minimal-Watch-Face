@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+ <uses-permission android:name="android.permission.READ_CALENDAR" />
+ <application android:label="Pixel Minimal Bridge" android:theme="@style/AppTheme">
+  <activity android:name=".SyncActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>
+  <receiver android:name=".BatteryReceiver" android:exported="false"><intent-filter><action android:name="android.intent.action.ACTION_POWER_CONNECTED"/><action android:name="android.intent.action.ACTION_POWER_DISCONNECTED"/></intent-filter></receiver>
+ </application>
+</manifest>

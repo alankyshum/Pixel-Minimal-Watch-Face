@@ -163,6 +163,16 @@
             <ListOption id="0" displayName="id_hollow_aod_0" icon="prev_hollow_0" />
             <ListOption id="1" displayName="id_hollow_aod_1" icon="prev_hollow_1" />
         </ListConfiguration>
+        <ListConfiguration defaultValue="22" displayName="id_top_complication_font_size" id="topComplicationFontSize">
+            <ListOption id="18" displayName="id_complication_font_size_small" />
+            <ListOption id="22" displayName="id_complication_font_size_medium" />
+            <ListOption id="26" displayName="id_complication_font_size_large" />
+        </ListConfiguration>
+        <ListConfiguration defaultValue="22" displayName="id_bottom_complication_font_size" id="bottomComplicationFontSize">
+            <ListOption id="18" displayName="id_complication_font_size_small" />
+            <ListOption id="22" displayName="id_complication_font_size_medium" />
+            <ListOption id="26" displayName="id_complication_font_size_large" />
+        </ListConfiguration>
         <!-- Toggles -->
         <BooleanConfiguration defaultValue="FALSE" displayName="id_sec_indicator" id="secIndicator"/>
         <!-- Flavors -->
@@ -238,11 +248,7 @@
             height="130">
             <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 0 ? 165 : 0" />
             <DefaultProviderPolicy
-                primaryProvider="com.fitbit.FitbitMobile/com.fitbit.complications.offloadable.steps.OffloadableStepsComplicationDataSourceService"
-                primaryProviderType="RANGED_VALUE"
-                secondaryProvider="com.samsung.android.wear.shealth/com.samsung.android.wear.shealth.complications.steps.StepsComplicationProviderService"
-                secondaryProviderType="RANGED_VALUE"
-                defaultSystemProvider="STEP_COUNT"
+                defaultSystemProvider="DAY_AND_DATE"
                 defaultSystemProviderType="SHORT_TEXT"/>
             <BoundingOval x="-1" y="-1" width="132" height="132"/>
             <Complication type="RANGED_VALUE">
@@ -300,7 +306,7 @@
                 </Group>
                 <PartText name="text" width="110" height="40" x="10" y="43">
                     <Text ellipsis="TRUE">
-                        <Font family="google_sans_text_medium" size="30" color="[CONFIGURATION.themeColor.0]">
+                        <Font family="orbitron_wght" size="24" color="[CONFIGURATION.themeColor.0]">
                             <Template>%s
                                 <Parameter expression="[COMPLICATION.TEXT]"/>
                             </Template>
@@ -314,104 +320,22 @@
                         <Fill color="#262626"/>
                     </Ellipse>
                 </PartDraw>
-                <Condition>
-                    <Expressions>
-                        <Expression name="shortTextIconTitle">
-                            <![CDATA[[COMPLICATION.TITLE] != null && [COMPLICATION.MONOCHROMATIC_IMAGE] != null]]></Expression>
-                        <Expression name="shortTextIcon">
-                            <![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null]]></Expression>
-                        <Expression name="shortTextTitle">
-                            <![CDATA[[COMPLICATION.TITLE] != null]]></Expression>
-                    </Expressions>
-                    <Compare expression="shortTextIconTitle">
-                        <Group name="icon" width="32" height="32" x="49" y="10">
-                            <PartImage  width="32" height="32" x="0" y="0" renderMode="MASK">
-                                <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/>
-                            </PartImage>
-                            <PartDraw width="32" height="32" x="0" y="0">
-                                <Rectangle width="32" height="32" x="0" y="0">
-                                    <Fill color="[CONFIGURATION.themeColor.0]"/>
-                                </Rectangle>
-                            </PartDraw>
-                        </Group>
-                        <PartText name="text" height="40" width="130" x="0" y="44">
-                            <Text ellipsis="TRUE">
-                                <Font family="google_sans_text_medium" size="32">
-                                    <Template>%s
-                                        <Parameter expression="[COMPLICATION.TEXT]" />
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                        <PartText name="title" height="40" width="130" x="0" y="76">
-                            <Text  ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.1]"
-                                    family="google_sans_text_medium"
-                                    size="28">
-                                    <Template>%s
-                                        <Parameter expression="[COMPLICATION.TITLE]" />
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                    </Compare>
-                    <Compare expression="shortTextIcon">
-                        <Group name="icon" width="34" height="34" x="48" y="22">
-                            <PartImage width="34" height="34" x="0" y="0" renderMode="MASK">
-                                <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/>
-                            </PartImage>
-                            <PartDraw width="34" height="34" x="0" y="0">
-                                <Rectangle width="34" height="34" x="0" y="0">
-                                    <Fill color="[CONFIGURATION.themeColor.1]"/>
-                                </Rectangle>
-                            </PartDraw>
-                        </Group>
-                        <PartText name="text" height="40" width="130" x="0" y="62">
-                            <Text ellipsis="TRUE">
-                                <Font family="google_sans_text_medium" size="34" color="[CONFIGURATION.themeColor.0]">
-                                    <Template>%s
-                                        <Parameter expression="[COMPLICATION.TEXT]" />
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                    </Compare>
-                    <Compare expression="shortTextTitle">
-                        <PartText name="title" height="40" width="130" x="0" y="20">
-                            <Text ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.1]"
-                                    family="google_sans_text_medium"
-                                    size="28">
-                                    <Template>%s
-                                        <Parameter expression="[COMPLICATION.TITLE]" />
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                        <PartText name="text" height="40" width="130" x="0" y="62">
-                            <Text  ellipsis="TRUE">
-                                <Font family="google_sans_text_medium" size="32" color="[CONFIGURATION.themeColor.0]">
-                                    <Template>%s
-                                        <Parameter expression="[COMPLICATION.TEXT]" />
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                    </Compare>
-                    <Default>
-                        <PartText name="text" height="40" width="130" x="0" y="44">
-                            <Text  ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.1]"
-                                    family="google_sans_text_medium"
-                                    size="32">
-                                    <Template>%s
-                                        <Parameter expression="[COMPLICATION.TEXT]" />
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                    </Default>
-                </Condition>
+                <PartText name="date" height="38" width="130" x="0" y="24">
+                    <Text align="CENTER" ellipsis="TRUE">
+                        <Font color="[CONFIGURATION.themeColor.0]" family="orbitron_wght" size="24">
+                            <Template>%s<Parameter expression='icuText("MM/dd", [UTC_TIMESTAMP])' /></Template>
+                        </Font>
+                    </Text>
+                    <Localization locales="en_US" />
+                </PartText>
+                <PartText name="weekday" height="34" width="130" x="0" y="67">
+                    <Text align="CENTER" ellipsis="TRUE">
+                        <Font color="[CONFIGURATION.themeColor.0]" family="orbitron_wght" size="21">
+                            <Upper><Template>%s<Parameter expression='icuText("EEE", [UTC_TIMESTAMP])' /></Template></Upper>
+                        </Font>
+                    </Text>
+                    <Localization locales="en_US" />
+                </PartText>
             </Complication>
             <Complication type="MONOCHROMATIC_IMAGE">
                 <PartDraw name="bg" width="130" height="130" x="0" y="0" tintColor="[CONFIGURATION.themeColor.1]">
@@ -470,8 +394,8 @@
             height="130">
             <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 0 ? 165 : 0" />
             <DefaultProviderPolicy
-                defaultSystemProvider="WATCH_BATTERY"
-                defaultSystemProviderType="RANGED_VALUE"/>
+                defaultSystemProvider="TIMER"
+                defaultSystemProviderType="SHORT_TEXT"/>
             <BoundingOval x="-1" y="-1" width="132" height="132"/>
             <Complication type="RANGED_VALUE">
                 <PartDraw name="progress_bar_bg" width="130" height="130" x="0" y="0" tintColor="[CONFIGURATION.themeColor.1]">
@@ -528,7 +452,7 @@
                 </Group>
                 <PartText name="text" width="110" height="40" x="10" y="43">
                     <Text ellipsis="TRUE">
-                        <Font family="google_sans_text_medium" size="30" color="[CONFIGURATION.themeColor.0]">
+                        <Font family="orbitron_wght" size="24" color="[CONFIGURATION.themeColor.0]">
                             <Template>%s
                                 <Parameter expression="[COMPLICATION.TEXT]"/>
                             </Template>
@@ -564,7 +488,7 @@
                         </Group>
                         <PartText name="text" height="40" width="130" x="0" y="44">
                             <Text ellipsis="TRUE">
-                                <Font family="google_sans_text_medium" size="32">
+                                <Font family="orbitron_wght" size="26">
                                     <Template>%s
                                         <Parameter expression="[COMPLICATION.TEXT]" />
                                     </Template>
@@ -574,8 +498,8 @@
                         <PartText name="title" height="40" width="130" x="0" y="76">
                             <Text  ellipsis="TRUE">
                                 <Font color="[CONFIGURATION.themeColor.1]"
-                                    family="google_sans_text_medium"
-                                    size="28">
+                                     family="orbitron_wght"
+                                     size="22">
                                     <Template>%s
                                         <Parameter expression="[COMPLICATION.TITLE]" />
                                     </Template>
@@ -596,7 +520,7 @@
                         </Group>
                         <PartText name="text" height="40" width="130" x="0" y="62">
                             <Text ellipsis="TRUE">
-                                <Font family="google_sans_text_medium" size="34" color="[CONFIGURATION.themeColor.0]">
+                                <Font family="orbitron_wght" size="27" color="[CONFIGURATION.themeColor.0]">
                                     <Template>%s
                                         <Parameter expression="[COMPLICATION.TEXT]" />
                                     </Template>
@@ -608,8 +532,8 @@
                         <PartText name="title" height="40" width="130" x="0" y="20">
                             <Text ellipsis="TRUE">
                                 <Font color="[CONFIGURATION.themeColor.1]"
-                                    family="google_sans_text_medium"
-                                    size="28">
+                                     family="orbitron_wght"
+                                     size="22">
                                     <Template>%s
                                         <Parameter expression="[COMPLICATION.TITLE]" />
                                     </Template>
@@ -618,7 +542,7 @@
                         </PartText>
                         <PartText name="text" height="40" width="130" x="0" y="62">
                             <Text  ellipsis="TRUE">
-                                <Font family="google_sans_text_medium" size="32" color="[CONFIGURATION.themeColor.0]">
+                                <Font family="orbitron_wght" size="26" color="[CONFIGURATION.themeColor.0]">
                                     <Template>%s
                                         <Parameter expression="[COMPLICATION.TEXT]" />
                                     </Template>
@@ -630,8 +554,8 @@
                         <PartText name="text" height="40" width="130" x="0" y="44">
                             <Text  ellipsis="TRUE">
                                 <Font color="[CONFIGURATION.themeColor.1]"
-                                    family="google_sans_text_medium"
-                                    size="32">
+                                     family="orbitron_wght"
+                                     size="26">
                                     <Template>%s
                                         <Parameter expression="[COMPLICATION.TEXT]" />
                                     </Template>
@@ -694,110 +618,41 @@
         <ComplicationSlot slotId="2"
             displayName="slot_2"
             supportedTypes="SHORT_TEXT LONG_TEXT EMPTY"
-            x="97"
-            y="47"
-            width="256"
-            height="46">
+            x="24"
+            y="0"
+            width="402"
+            height="112">
             <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 0 ? 165 : 0" />
             <DefaultProviderPolicy
                 primaryProvider="com.weartools.phonebattcomp/com.weartools.phonebattcomp.complication.MobileBatteryComplicationService"
                 primaryProviderType="SHORT_TEXT"
                 defaultSystemProvider="DAY_AND_DATE"
                 defaultSystemProviderType="SHORT_TEXT"/>
-            <BoundingRoundBox cornerRadius="15" width="258" height="48" x="-1" y="-1" />
+            <!-- BoundingShape controls crop and selection: https://developer.android.com/training/wearables/wff/complications -->
+            <BoundingArc centerX="201" centerY="225" width="410" height="410" startAngle="295" endAngle="65" direction="CLOCKWISE" thickness="40" />
             <Complication type="SHORT_TEXT">
                 <Condition>
                     <Expressions>
                         <Expression name="combinedBatt"><![CDATA[subText([COMPLICATION.TEXT],0,1) == ﻿]]></Expression>
-                        <Expression name="textIconTitle"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null && [COMPLICATION.TITLE] != null]]></Expression>
-                        <Expression name="textTitle"><![CDATA[[COMPLICATION.TITLE] != null]]></Expression>
-                        <Expression name="textIcon"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null]]></Expression>
                     </Expressions>
                     <Compare expression="combinedBatt">
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="CENTER" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <InlineImage
-                                        color="[CONFIGURATION.themeColor.1]"
-                                        resource="empty_icon"
-                                        source="COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT"
-                                        width="32"
-                                        height="32" />
-                                    <Template><![CDATA[ %s  ]]>
-                                        <Parameter expression="[BATTERY_PERCENT]" />
-                                    </Template>
-                                    <InlineImage
-                                        color="[CONFIGURATION.themeColor.1]"
-                                        resource="empty_icon"
-                                        source="COMPLICATION.MONOCHROMATIC_IMAGE"
-                                        width="32"
-                                        height="32" />
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="subText([COMPLICATION.TEXT],1,4)==100?100:(subText([COMPLICATION.TEXT],1,3))" />
-                                    </Template>
+                        <PartText width="450" height="450" x="-24" y="0">
+                            <TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="305" endAngle="55" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE">
+                                <Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="32" letterSpacing="-0.05">
+                                    <Template><![CDATA[%s · %s]]><Parameter expression="[BATTERY_PERCENT]"/><Parameter expression="subText([COMPLICATION.TEXT],1,4)==100?100:(subText([COMPLICATION.TEXT],1,3))"/></Template>
                                 </Font>
-                            </Text>
-                        </PartText>
-                    </Compare>
-                    <Compare expression="textIconTitle">
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="CENTER" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.1]" family="google_sans_text_medium" size="32">
-                                    <InlineImage color="[CONFIGURATION.themeColor.1]" resource="empty_icon"
-                                        source="COMPLICATION.MONOCHROMATIC_IMAGE"
-                                        width="32" height="32"/>
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="[COMPLICATION.TITLE]"/>
-                                    </Template>
-                                </Font>
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="[COMPLICATION.TEXT]"/>
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                    </Compare>
-                    <Compare expression="textIcon">
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="CENTER" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <InlineImage color="[CONFIGURATION.themeColor.1]" resource="empty_icon"
-                                        source="COMPLICATION.MONOCHROMATIC_IMAGE"
-                                        width="32" height="32"/>
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="[COMPLICATION.TEXT]"/>
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                    </Compare>
-                    <Compare expression="textTitle">
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="CENTER" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.1]" family="google_sans_text_medium" size="32">
-                                    <Template>%s
-                                        <Parameter expression="[COMPLICATION.TITLE]"/>
-                                    </Template>
-                                </Font>
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="[COMPLICATION.TEXT]"/>
-                                    </Template>
-                                </Font>
-                            </Text>
+                            </TextCircular>
                         </PartText>
                     </Compare>
                     <Default>
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="START" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <Template>%s
-                                        <Parameter expression="[COMPLICATION.TEXT]"/>
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
+                        <Group name="top_short_text" width="402" height="112" x="0" y="0">
+                            <!-- Keep all three top sizes on the same ±55° arc; its endpoints remain inside this slot. -->
+                            <ListConfiguration id="topComplicationFontSize">
+                                <ListOption id="18"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="305" endAngle="55" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                                <ListOption id="22"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="305" endAngle="55" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                                <ListOption id="26"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="305" endAngle="55" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                            </ListConfiguration>
+                        </Group>
                     </Default>
                 </Condition>
             </Complication>
@@ -805,74 +660,21 @@
                 <Condition>
                     <Expressions>
                         <Expression name="notificationsRow"><![CDATA[[COMPLICATION.TEXT] == "---"]]></Expression>
-                        <Expression name="textIconTitle"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null && [COMPLICATION.TITLE] != null]]></Expression>
-                        <Expression name="textTitle"><![CDATA[[COMPLICATION.TITLE] != null]]></Expression>
-                        <Expression name="textIcon"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null]]></Expression>
                     </Expressions>
                     <Compare expression="notificationsRow">
-                        <PartImage width="256" height="32"  x="0" y="7" tintColor="[CONFIGURATION.themeColor.1]">
+                        <PartImage width="32" height="32" x="185" y="4" tintColor="[CONFIGURATION.themeColor.1]">
                             <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]"/>
                         </PartImage>
                     </Compare>
-                    <Compare expression="textIconTitle">
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="CENTER" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.1]" family="google_sans_text_medium" size="32">
-                                    <InlineImage color="[CONFIGURATION.themeColor.1]" resource="empty_icon"
-                                        source="COMPLICATION.MONOCHROMATIC_IMAGE"
-                                        width="32" height="32"/>
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="[COMPLICATION.TITLE]"/>
-                                    </Template>
-                                </Font>
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="[COMPLICATION.TEXT]"/>
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                    </Compare>
-                    <Compare expression="textIcon">
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="CENTER" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <InlineImage color="[CONFIGURATION.themeColor.1]" resource="empty_icon"
-                                        source="COMPLICATION.MONOCHROMATIC_IMAGE"
-                                        width="32" height="32"/>
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="[COMPLICATION.TEXT]"/>
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                    </Compare>
-                    <Compare expression="textTitle">
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="CENTER" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.1]" family="google_sans_text_medium" size="32">
-                                    <Template>%s
-                                        <Parameter expression="[COMPLICATION.TITLE]"/>
-                                    </Template>
-                                </Font>
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="[COMPLICATION.TEXT]"/>
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                    </Compare>
                     <Default>
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="START" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <Template>%s
-                                        <Parameter expression="[COMPLICATION.TEXT]"/>
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
+                        <Group name="top_long_text" width="402" height="112" x="0" y="0">
+                            <!-- Keep all three top sizes on the same ±55° arc; its endpoints remain inside this slot. -->
+                            <ListConfiguration id="topComplicationFontSize">
+                                <ListOption id="18"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="305" endAngle="55" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                                <ListOption id="22"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="305" endAngle="55" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                                <ListOption id="26"><PartText width="450" height="112" x="-24" y="0"><TextCircular centerX="225" centerY="225" width="410" height="410" startAngle="305" endAngle="55" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                            </ListConfiguration>
+                        </Group>
                     </Default>
                 </Condition>
             </Complication>
@@ -890,174 +692,61 @@
             <BoundingRoundBox cornerRadius="15" width="258" height="48" x="-1" y="-1" />
             <Complication type="SHORT_TEXT">
                 <Condition>
-                    <Expressions>
-                        <Expression name="combinedBatt"><![CDATA[subText([COMPLICATION.TEXT],0,1) == ﻿]]></Expression>
-                        <Expression name="textIconTitle"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null && [COMPLICATION.TITLE] != null]]></Expression>
-                        <Expression name="textTitle"><![CDATA[[COMPLICATION.TITLE] != null]]></Expression>
-                        <Expression name="textIcon"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null]]></Expression>
-                    </Expressions>
+                    <Expressions><Expression name="combinedBatt"><![CDATA[subText([COMPLICATION.TEXT],0,1) == ﻿]]></Expression></Expressions>
                     <Compare expression="combinedBatt">
                         <PartText width="256" height="46" x="0" y="0">
                             <Text align="CENTER" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <InlineImage
-                                        color="[CONFIGURATION.themeColor.1]"
-                                        resource="empty_icon"
-                                        source="COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT"
-                                        width="32"
-                                        height="32" />
-                                    <Template><![CDATA[ %s  ]]>
-                                        <Parameter expression="[BATTERY_PERCENT]" />
-                                    </Template>
-                                    <InlineImage
-                                        color="[CONFIGURATION.themeColor.1]"
-                                        resource="empty_icon"
-                                        source="COMPLICATION.MONOCHROMATIC_IMAGE"
-                                        width="32"
-                                        height="32" />
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="subText([COMPLICATION.TEXT],1,4)==100?100:(subText([COMPLICATION.TEXT],1,3))" />
-                                    </Template>
+                                <Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="32" letterSpacing="-0.05">
+                                    <InlineImage color="[CONFIGURATION.themeColor.1]" resource="empty_icon" source="COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT" width="32" height="32" />
+                                    <Template><![CDATA[ %s  ]]><Parameter expression="[BATTERY_PERCENT]" /></Template>
+                                    <InlineImage color="[CONFIGURATION.themeColor.1]" resource="empty_icon" source="COMPLICATION.MONOCHROMATIC_IMAGE" width="32" height="32" />
+                                    <Template><![CDATA[ %s]]><Parameter expression="subText([COMPLICATION.TEXT],1,4)==100?100:(subText([COMPLICATION.TEXT],1,3))" /></Template>
                                 </Font>
                             </Text>
                         </PartText>
                     </Compare>
-                    <Compare expression="textIconTitle">
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="CENTER" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.1]" family="google_sans_text_medium" size="32">
-                                    <InlineImage color="[CONFIGURATION.themeColor.1]" resource="empty_icon"
-                                        source="COMPLICATION.MONOCHROMATIC_IMAGE"
-                                        width="32" height="32"/>
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="[COMPLICATION.TITLE]"/>
-                                    </Template>
-                                </Font>
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="[COMPLICATION.TEXT]"/>
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                    </Compare>
-                    <Compare expression="textIcon">
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="CENTER" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <InlineImage color="[CONFIGURATION.themeColor.1]" resource="empty_icon"
-                                        source="COMPLICATION.MONOCHROMATIC_IMAGE"
-                                        width="32" height="32"/>
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="[COMPLICATION.TEXT]"/>
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                    </Compare>
-                    <Compare expression="textTitle">
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="CENTER" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.1]" family="google_sans_text_medium" size="32">
-                                    <Template>%s
-                                        <Parameter expression="[COMPLICATION.TITLE]"/>
-                                    </Template>
-                                </Font>
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="[COMPLICATION.TEXT]"/>
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                    </Compare>
-                    <Default>
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="START" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <Template>%s
-                                        <Parameter expression="[COMPLICATION.TEXT]"/>
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                    </Default>
+                    <Default><Group name="bottom_normal_text" width="256" height="46" x="0" y="0"><ListConfiguration id="bottomComplicationFontSize"><ListOption id="18"><PartText width="256" height="46" x="0" y="0"><Text align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></Text></PartText></ListOption><ListOption id="22"><PartText width="256" height="46" x="0" y="0"><Text align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></Text></PartText></ListOption><ListOption id="26"><PartText width="256" height="46" x="0" y="0"><Text align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></Text></PartText></ListOption></ListConfiguration></Group></Default>
                 </Condition>
             </Complication>
             <Complication type="LONG_TEXT">
                 <Condition>
-                    <Expressions>
-                        <Expression name="notificationsRow"><![CDATA[[COMPLICATION.TEXT] == "---"]]></Expression>
-                        <Expression name="textIconTitle"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null && [COMPLICATION.TITLE] != null]]></Expression>
-                        <Expression name="textTitle"><![CDATA[[COMPLICATION.TITLE] != null]]></Expression>
-                        <Expression name="textIcon"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null]]></Expression>
-                    </Expressions>
+                    <Expressions><Expression name="notificationsRow"><![CDATA[[COMPLICATION.TEXT] == "---"]]></Expression></Expressions>
                     <Compare expression="notificationsRow">
-                        <PartImage width="256" height="32"  x="0" y="7" tintColor="[CONFIGURATION.themeColor.1]">
-                            <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]"/>
-                        </PartImage>
+                        <PartImage width="256" height="32" x="0" y="7" tintColor="[CONFIGURATION.themeColor.1]"><Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]"/></PartImage>
                     </Compare>
-                    <Compare expression="textIconTitle">
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="CENTER" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.1]" family="google_sans_text_medium" size="32">
-                                    <InlineImage color="[CONFIGURATION.themeColor.1]" resource="empty_icon"
-                                        source="COMPLICATION.MONOCHROMATIC_IMAGE"
-                                        width="32" height="32"/>
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="[COMPLICATION.TITLE]"/>
-                                    </Template>
-                                </Font>
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="[COMPLICATION.TEXT]"/>
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                    </Compare>
-                    <Compare expression="textIcon">
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="CENTER" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <InlineImage color="[CONFIGURATION.themeColor.1]" resource="empty_icon"
-                                        source="COMPLICATION.MONOCHROMATIC_IMAGE"
-                                        width="32" height="32"/>
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="[COMPLICATION.TEXT]"/>
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                    </Compare>
-                    <Compare expression="textTitle">
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="CENTER" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.1]" family="google_sans_text_medium" size="32">
-                                    <Template>%s
-                                        <Parameter expression="[COMPLICATION.TITLE]"/>
-                                    </Template>
-                                </Font>
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <Template><![CDATA[ %s]]>
-                                        <Parameter expression="[COMPLICATION.TEXT]"/>
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                    </Compare>
-                    <Default>
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="START" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.0]" family="google_sans_text_medium" size="32">
-                                    <Template>%s
-                                        <Parameter expression="[COMPLICATION.TEXT]"/>
-                                    </Template>
-                                </Font>
-                            </Text>
-                        </PartText>
-                    </Default>
+                    <Default><Group name="bottom_normal_text" width="256" height="46" x="0" y="0"><ListConfiguration id="bottomComplicationFontSize"><ListOption id="18"><PartText width="256" height="46" x="0" y="0"><Text align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></Text></PartText></ListOption><ListOption id="22"><PartText width="256" height="46" x="0" y="0"><Text align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></Text></PartText></ListOption><ListOption id="26"><PartText width="256" height="46" x="0" y="0"><Text align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></Text></PartText></ListOption></ListConfiguration></Group></Default>
                 </Condition>
+            </Complication>
+            <Complication type="EMPTY" />
+        </ComplicationSlot>
+
+        <!-- Second top line: a deliberately shorter inner arc above the clock. -->
+        <ComplicationSlot slotId="4"
+            displayName="slot_4"
+            supportedTypes="SHORT_TEXT LONG_TEXT EMPTY"
+            x="97"
+            y="57"
+            width="256"
+            height="80">
+            <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 0 ? 165 : 0" />
+            <BoundingArc centerX="128" centerY="168" width="320" height="320" startAngle="305" endAngle="55" direction="CLOCKWISE" thickness="40" />
+            <Complication type="SHORT_TEXT">
+                <Group name="second_top_short_text" width="256" height="80" x="0" y="0">
+                    <ListConfiguration id="topComplicationFontSize">
+                        <ListOption id="18"><PartText width="450" height="450" x="-97" y="-57"><TextCircular centerX="225" centerY="225" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></TextCircular></PartText></ListOption>
+                        <ListOption id="22"><PartText width="450" height="450" x="-97" y="-57"><TextCircular centerX="225" centerY="225" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></TextCircular></PartText></ListOption>
+                        <ListOption id="26"><PartText width="450" height="450" x="-97" y="-57"><TextCircular centerX="225" centerY="225" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></TextCircular></PartText></ListOption>
+                    </ListConfiguration>
+                </Group>
+            </Complication>
+            <Complication type="LONG_TEXT">
+                <Group name="second_top_long_text" width="256" height="80" x="0" y="0">
+                    <ListConfiguration id="topComplicationFontSize">
+                        <ListOption id="18"><PartText width="450" height="450" x="-97" y="-57"><TextCircular centerX="225" centerY="225" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                        <ListOption id="22"><PartText width="450" height="450" x="-97" y="-57"><TextCircular centerX="225" centerY="225" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                        <ListOption id="26"><PartText width="450" height="450" x="-97" y="-57"><TextCircular centerX="225" centerY="225" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                    </ListConfiguration>
+                </Group>
             </Complication>
             <Complication type="EMPTY" />
         </ComplicationSlot>
@@ -1071,13 +760,13 @@
                 align="CENTER" x="0" y="75"
                 width="250" height="180">
                 <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.hollowAOD] == 0 ? 255 : 0" />
-                <Font color="#fafafa" size="128" family="google_sans_clock_2"/>
+                <Font color="#fafafa" size="112" family="orbitron_wght" weight="MEDIUM"/>
             </TimeText>
             <TimeText format="mm" hourFormat="SYNC_TO_DEVICE"
                 align="CENTER" x="0" y="191"
                 width="250" height="180">
                 <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.hollowAOD] == 0 ? 255 : 0" />
-                <Font color="#fafafa" size="128" family="google_sans_clock_2"/>
+                <Font color="#fafafa" size="112" family="orbitron_wght" weight="MEDIUM"/>
             </TimeText>
             <!-- Hollow -->
             <TimeText format="hh" hourFormat="SYNC_TO_DEVICE"
@@ -1085,14 +774,14 @@
                 width="250" height="180"
                 alpha="0">
                 <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.hollowAOD] == 1 ? 255 : 0" />
-                <Font color="#fafafa" size="128" family="google_sans_clock_2_outlined"/>
+                <Font color="#fafafa" size="112" family="orbitron_wght" weight="MEDIUM"/>
             </TimeText>
             <TimeText format="mm" hourFormat="SYNC_TO_DEVICE"
                 align="CENTER" x="0" y="191"
                 width="250" height="180"
                 alpha="0">
                 <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.hollowAOD] == 1 ? 255 : 0" />
-                <Font color="#fafafa" size="128" family="google_sans_clock_2_outlined"/>
+                <Font color="#fafafa" size="112" family="orbitron_wght" weight="MEDIUM"/>
             </TimeText>
         </DigitalClock>
     </Scene>

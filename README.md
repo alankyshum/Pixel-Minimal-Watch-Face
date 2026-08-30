@@ -1,18 +1,100 @@
-# PixelMinimalWatchFace
-Made in Watch Face Format 2 (Wear OS 5+)
+# Pixel Minimal Long Text (Local)
 
-## Preview
+This is a configurable derivative of an upstream WFF2 watch face for Wear OS 5+. It is source-available for personal use and GitHub forking under the written upstream permission recorded in [UPSTREAM_PERMISSION.md](UPSTREAM_PERMISSION.md).
 
-<img src="https://github.com/user-attachments/assets/75819eb3-1cab-44a4-812f-9ec3c313706a" width=25% height=25%><img src="https://github.com/user-attachments/assets/03b9dfa6-bbba-4707-a362-70e990bd0866" width=25% height=25%>
+## Current layout and assignments
 
-In order to get **dual phone / watch** battery layout you need to download free [Phone Battery Complication](https://play.google.com/store/apps/details?id=com.weartools.phonebattcomp&hl=en) app and set Phone battery level complication in a corresponding slot.
+- **Center:** large digital clock.
+- **Top outer arc (slot 2):** the third-party [Phone Battery Complication](https://play.google.com/store/apps/details?id=com.weartools.phonebattcomp) Event Timer complication. Its normal text behavior is retained; its combined-battery presentation follows the same outer arc so it remains inside that slot's selectable/cropped arc shape, preserving watch and companion/phone percentages as plain circular text separated by a centered dot, without inline watch/phone icons because inline images are not used on the circular path. Special top notification rows use a compact monochromatic icon at the arc apex.
+- **Top inner arc (slot 4):** an independent, initially unassigned text-only `SHORT_TEXT` or `LONG_TEXT` complication. `SHORT_TEXT` displays provider text only; `LONG_TEXT` displays provider text followed by its title (for example, `Now > 11:15`). Its narrower circular-text arc is below slot 2 and above the clock, leaving the left and right circular complication areas clear.
+- **Bottom (slot 3):** a Calendar Pro `LONG_TEXT` next-event complication. In the observed setup it supplies next-event text with time/remaining information; the face displays the provider's text and title and does not guarantee separate start and end times.
+- **Left (slot 0):** system **Day & Date** `SHORT_TEXT`, customized to omit the provider icon and show centered `MM/DD` and uppercase English weekday lines.
+- **Right (slot 1):** timer/countdown complication.
 
-Phone Notifications complication (mirroring phone status bar notification icons) is also available within same app. See description for more info & how to set up.
+Slots remain configurable in the Wear OS complication editor. Phone Battery Complication and Calendar Pro are third-party apps and are **not bundled** here. The optional `phone-companion`, `watch-provider`, and `shared-protocol` modules are local bridge modules; they are separate from both third-party providers and are not required for the assignments above. See [LOCAL_ARCHITECTURE.md](LOCAL_ARCHITECTURE.md) for their local-only design.
 
-<img src="https://github.com/user-attachments/assets/211d6e37-0e18-4edc-8deb-a1bce40604bc" width=50% height=50% alt="Pixel Minimal Watch Face previews">
+## Build and personal use
 
-## Release
+1. Open the project in Android Studio with an installed Wear OS SDK, or run `bash ./gradlew :watchface:assembleDebug`.
+2. Install the resulting debug APK to a compatible Wear OS 5+ watch using Android Studio or `adb` for your own personal use.
+3. Select **Pixel Minimal Long Text (Local)** and set the five complication slots in the watch/phone complication editor. Install and configure the third-party provider apps separately if you use them.
+4. For the optional local bridge, build/install its phone and watch debug APKs on their respective devices; its current signing/deployment constraints are documented in [LOCAL_ARCHITECTURE.md](LOCAL_ARCHITECTURE.md).
 
-Download the package (.apk) to side-load from <a href="https://github.com/amoledwatchfaces/Pixel-Minimal-Watch-Face/releases">HERE</a>
+This checkout has no release signing setup. Compiled APKs are not distributed by this repository.
 
+## Font mapping (local v1.0.14 crash fix)
 
+- Center clock, left date display, and right Timer use the bundled Orbitron font; the left display is provider-independent `MM/DD` plus uppercase English weekday, the clock remains 112px, and the circular-complication text is scaled for fit.
+- Top and bottom text complications (slots 2, 4, and 3) use the Wear OS system font with device-proven `letterSpacing="-0.05"` (−0.05em), including their combined-battery layouts where applicable, while retaining the existing 18/22/26px font-size options and long-text behavior. Slot 4 is text-only and shares slot 2's top font-size configuration. Center, left, and right remain on Orbitron.
+
+### v1.0.14 release note
+
+Replace v1.0.13: its literal `-0.5em` tracking could produce zero or negative text-bitmap widths in the device renderer and cause runtime crashes. v1.0.14 restores the device-proven safe `-0.05em` correction. The center Orbitron MEDIUM 112px clock, zero-padded `MM/DD` plus uppercase English weekday Orbitron 24/21px left date, right Timer Orbitron 24/26/22/27/22/26/26px sequence, and top/bottom system-font sizes are otherwise retained.
+
+### v1.0.15 release note
+
+Adds an independent second top circular text complication (slot 4). Its `LONG_TEXT` rendering includes both provider text and title, fixing Calendar Pro's observed `Now > 11:15` presentation while keeping the existing top slot's battery and notification behavior inside its circular arc.
+
+## Configuration inventory
+
+This section is generated from `watchface.xml` and `strings.xml`. Do not edit it manually: run `python3 tools/generate_readme_config.py` after changing watch-face configuration resources. CI and the repository hook use `--check` to reject stale content.
+
+<!-- BEGIN GENERATED CONFIGURATION INVENTORY -->
+
+### User configurations
+
+| ID | Label | Type | Default | Options |
+| --- | --- | --- | --- | --- |
+| `themeColor` | Material Theme | color | `72` | `0` Graphite; `1` Cloud; `2` Almond; `3` Watermelon; `4` Pomelo; `5` Champagne; `6` Wheat; `7` Limoncello; `8` Key Lime; `9` Lemongrass; `10` Spring; `11` Lime; `12` Pear; `13` Grass Green; `14` Proto Green; `15` Moss Green; `16` Fern; `17` Spearmint; `72` Alpine Green; `18` Mint; `19` Jade; `20` Steam Green; `21` Sage; `22` Avocado; `23` Forest; `71` Pine Green; `24` Seafoam; `25` Stream; `26` Aqua; `27` Lagoon; `29` Sky; `30` Ocean; `31` Sapphire; `32` Royal Blue; `33` Arctic; `34` Icy Blue; `35` Amethyst; `36` Lilac; `38` Lavender; `39` Flamingo; `40` Verbena; `41` Guava; `42` Coral; `43` Peach; `44` Orange; `45` Chai; `46` Honey; `47` Melon; `48` Dandelion; `49` Milkshake; `50` Sand; `51` Salmon; `52` Amber; `54` Charcoal; `55` Ocean Research; `56` Nothing; `57` Submarine; `58` Proto Blue; `59` Khaki; `60` Olive Vibrant; `61` Olive Dull; `62` Candy; `63` United 24; `64` Iridescent; `65` Industrial; `66` Green Shock; `67` Juniper Haze; `68` Neon Green; `69` Neon Lime |
+| `timeColor` | Digital Clock Color | color | `71` | `100` White; `0` Graphite; `1` Cloud; `2` Almond; `3` Watermelon; `4` Pomelo; `5` Champagne; `6` Wheat; `7` Limoncello; `8` Key Lime; `9` Lemongrass; `10` Spring; `11` Lime; `12` Pear; `62` Grass Green; `63` Proto Green; `13` Moss Green; `14` Fern; `15` Spearmint; `16` Mint; `17` Jade; `72` Alpine Green; `18` Steam Green; `19` Sage; `20` Avocado; `21` Forest; `71` Pine Green; `22` Seafoam; `23` Stream; `24` Aqua; `25` Lagoon; `26` Sunset; `27` Sky; `28` Ocean; `29` Sapphire; `30` Royal Blue; `31` Arctic; `32` Icy Blue; `33` Amethyst; `34` Lilac; `35` Macaron; `36` Lavender; `37` Flamingo; `38` Verbena; `39` Guava; `40` Coral; `41` Peach; `42` Chai; `43` Honey; `44` Melon; `45` Dandelion; `46` Milkshake; `47` Sand; `48` Salmon; `49` Amber; `50` Creamsicle; `51` Mustard; `52` Charcoal; `53` Radar; `54` Cyborg; `55` Sealab; `56` Voltage; `57` Ocean Research; `58` Nothing; `59` Thermal; `60` Submarine; `61` Proto Blue; `64` Khaki; `65` Industrial; `66` Green Shock; `67` Juniper Haze; `68` Neon Green; `69` Neon Lime; `70` Neon Orange |
+| `aod` | AOD Style | list | `0` | `0` Dimmed; `1` Time Only; `2` Time Only ++ |
+| `hollowAOD` | AOD Clock | list | `0` | `0` Solid; `1` Solid (formerly Outlined) |
+| `topComplicationFontSize` | Top complication font size | list | `22` | `18` Small; `22` Medium; `26` Large |
+| `bottomComplicationFontSize` | Bottom complication font size | list | `22` | `18` Small; `22` Medium; `26` Large |
+| `secIndicator` | Seconds Indicator | boolean | `FALSE` | `FALSE` Off; `TRUE` On |
+
+### Complication slots
+
+| Slot | Label | Bounds | Supported types | Default policy |
+| --- | --- | --- | --- | --- |
+| `0` | Left Circle Slot | 130 × 130 at 5,160 | `RANGED_VALUE SHORT_TEXT MONOCHROMATIC_IMAGE SMALL_IMAGE EMPTY` | `defaultSystemProvider`=DAY_AND_DATE, `defaultSystemProviderType`=SHORT_TEXT |
+| `1` | Right Circle Slot | 130 × 130 at 315,160 | `RANGED_VALUE SHORT_TEXT MONOCHROMATIC_IMAGE SMALL_IMAGE EMPTY` | `defaultSystemProvider`=TIMER, `defaultSystemProviderType`=SHORT_TEXT |
+| `2` | Top Box Slot | 402 × 112 at 24,0 | `SHORT_TEXT LONG_TEXT EMPTY` | `defaultSystemProvider`=DAY_AND_DATE, `defaultSystemProviderType`=SHORT_TEXT, `primaryProvider`=com.weartools.phonebattcomp/com.weartools.phonebattcomp.complication.MobileBatteryComplicationService, `primaryProviderType`=SHORT_TEXT |
+| `3` | Bottom Box Slot | 256 × 46 at 97,355 | `SHORT_TEXT LONG_TEXT EMPTY` | `defaultSystemProvider`=DAY_AND_DATE, `defaultSystemProviderType`=SHORT_TEXT |
+| `4` | Second Top Text Slot | 256 × 80 at 97,57 | `SHORT_TEXT LONG_TEXT EMPTY` | — |
+
+### Flavors
+
+| ID | Label | Assignments |
+| --- | --- | --- |
+| `0` | 1st flavor | `themeColor`=`72`, `timeColor`=`71` |
+| `1` | 2nd flavor | `themeColor`=`17`, `timeColor`=`26`, `secIndicator`=`TRUE` |
+| `2` | 3rd flavor | `themeColor`=`65`, `timeColor`=`0`, `secIndicator`=`TRUE` |
+| `3` | 4th flavor | `themeColor`=`64`, `timeColor`=`70` |
+| `4` | 5th flavor | `themeColor`=`60`, `timeColor`=`72` |
+| `5` | 6th flavor | `themeColor`=`36`, `timeColor`=`35`, `secIndicator`=`TRUE` |
+
+Default flavor: `0`.
+<!-- END GENERATED CONFIGURATION INVENTORY -->
+
+## Contributor checks
+
+```sh
+# One-time, repository-local hook setup (does not alter global Git configuration)
+git config core.hooksPath .githooks
+
+# Refresh/check this README's generated inventory
+python3 tools/generate_readme_config.py
+python3 tools/generate_readme_config.py --check
+
+# Verify the fixed font mapping and non-font WFF invariants
+python3 tools/verify_font_mapping.py
+```
+
+The tracked pre-commit hook runs the `--check` command. It is intentionally activated only after the explicit local `core.hooksPath` command above.
+
+## Permission, licensing, and publication status
+
+This repository is **source-available, not OSI open source**. The supplied written upstream permission is quoted verbatim in [UPSTREAM_PERMISSION.md](UPSTREAM_PERMISSION.md). It is interpreted narrowly as permission for public source hosting and GitHub forking for personal use. It does not grant or claim commercial rights, sublicensing, general redistribution, or APK/release distribution. Downstream users should seek clarification from the upstream rights holder for rights beyond that quoted permission. This is practical compliance information, not legal advice.
+
+The sole bundled font is the unmodified `orbitron_wght.ttf`, licensed under the SIL Open Font License 1.1; see [OFL.txt](OFL.txt) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). No blanket license applies to the remaining upstream-derived material.

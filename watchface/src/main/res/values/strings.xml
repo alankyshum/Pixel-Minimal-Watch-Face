@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="watch_face_name">Pixel Minimal</string>
+    <string name="watch_face_name">Pixel Minimal Long Text (Local)</string>
 
     <string name="id_aod">AOD Style</string>
     <string name="id_aod_0">Dimmed</string>
@@ -11,12 +11,19 @@
 
     <string name="id_hollow_aod">AOD Clock</string>
     <string name="id_hollow_aod_0">Solid</string>
-    <string name="id_hollow_aod_1">Outlined</string>
+    <string name="id_hollow_aod_1">Solid (formerly Outlined)</string>
 
     <string name="slot_0">Left Circle Slot</string>
     <string name="slot_1">Right Circle Slot</string>
     <string name="slot_2">Top Box Slot</string>
     <string name="slot_3">Bottom Box Slot</string>
+    <string name="slot_4">Second Top Text Slot</string>
+
+    <string name="id_top_complication_font_size">Top complication font size</string>
+    <string name="id_bottom_complication_font_size">Bottom complication font size</string>
+    <string name="id_complication_font_size_small">Small</string>
+    <string name="id_complication_font_size_medium">Medium</string>
+    <string name="id_complication_font_size_large">Large</string>
 
     <string name="id_material_theme">Material Theme</string>
     <string name="id_time_color">Digital Clock Color</string>
