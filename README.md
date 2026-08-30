@@ -2,10 +2,6 @@
 
 This is a configurable derivative of an upstream WFF2 watch face for Wear OS 5+. It is source-available for personal use and GitHub forking under the written upstream permission recorded in [UPSTREAM_PERMISSION.md](UPSTREAM_PERMISSION.md).
 
-![Sanitized and annotated v1.0.6 runtime example](docs/images/v106-sanitized-annotated.png)
-
-*Annotated/sanitized example derived from a v1.0.6 runtime capture. Dynamic event title, date, countdown, and bottom event text were replaced with generic labels; it is not presented as an untouched runtime capture.*
-
 ## Current layout and assignments
 
 - **Center:** large digital clock.
