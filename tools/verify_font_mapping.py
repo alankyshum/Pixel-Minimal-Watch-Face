@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assert the v1.0.13 literal -0.5em system-font top/bottom mapping against HEAD."""
+"""Assert the v1.0.14 device-proven -0.05em system-font mapping against HEAD."""
 
 from __future__ import annotations
 
@@ -33,8 +33,8 @@ def main() -> int:
     assert fonts(new_slots["1"]) == [("orbitron_wght", "24", None), ("orbitron_wght", "26", None), ("orbitron_wght", "22", None), ("orbitron_wght", "27", None), ("orbitron_wght", "22", None), ("orbitron_wght", "26", None), ("orbitron_wght", "26", None)]
     for slot_id in ("2", "3"):
         assert len(old_fonts[slot_id]) == 7
-        assert fonts(new_slots[slot_id]) == [("SYNC_TO_DEVICE", size, "-0.5") for _, size, _ in old_fonts[slot_id]]
-    assert sum(font.get("family") == "SYNC_TO_DEVICE" and font.get("letterSpacing") == "-0.5" for slot_id in ("2", "3") for font in new_slots[slot_id].findall(".//Font")) == 14
+        assert fonts(new_slots[slot_id]) == [("SYNC_TO_DEVICE", size, "-0.05") for _, size, _ in old_fonts[slot_id]]
+    assert sum(font.get("family") == "SYNC_TO_DEVICE" and font.get("letterSpacing") == "-0.05" for slot_id in ("2", "3") for font in new_slots[slot_id].findall(".//Font")) == 14
 
     # Geometry, configurations, provider policies, and image/notification branches are byte-stable.
     for slot_id in ("0", "1", "2", "3"):
@@ -86,7 +86,7 @@ def main() -> int:
     new_clock = current.find(".//DigitalClock")
     assert old_clock is not None and new_clock is not None
     assert ET.tostring(old_clock) == ET.tostring(new_clock)
-    print("v1.0.13 numeric slot-0 date and literal -0.5em system-font top/bottom mappings verified")
+    print("v1.0.14 numeric slot-0 date and device-proven -0.05em system-font top/bottom mappings verified")
     return 0
 
 

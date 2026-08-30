@@ -21,10 +21,14 @@ Slots remain configurable in the Wear OS complication editor. Phone Battery Comp
 
 This checkout has no release signing setup. Compiled APKs are not distributed by this repository.
 
-## Font mapping (local v1.0.13 experiment)
+## Font mapping (local v1.0.14 crash fix)
 
 - Center clock, left date display, and right Timer use the bundled Orbitron font; the left display is provider-independent `MM/DD` plus uppercase English weekday, the clock remains 112px, and the circular-complication text is scaled for fit.
-- Top and bottom text complications (slots 2 and 3) use the Wear OS system font with literal `letterSpacing="-0.5"` (−0.5em), including their combined-battery layouts, while retaining the existing 18/22/26px font-size options and long-text behavior. Center, left, and right remain on Orbitron.
+- Top and bottom text complications (slots 2 and 3) use the Wear OS system font with device-proven `letterSpacing="-0.05"` (−0.05em), including their combined-battery layouts, while retaining the existing 18/22/26px font-size options and long-text behavior. Center, left, and right remain on Orbitron.
+
+### v1.0.14 release note
+
+Replace v1.0.13: its literal `-0.5em` tracking could produce zero or negative text-bitmap widths in the device renderer and cause runtime crashes. v1.0.14 restores the device-proven safe `-0.05em` correction. The center Orbitron MEDIUM 112px clock, zero-padded `MM/DD` plus uppercase English weekday Orbitron 24/21px left date, right Timer Orbitron 24/26/22/27/22/26/26px sequence, and top/bottom system-font sizes are otherwise retained.
 
 ## Configuration inventory
 
