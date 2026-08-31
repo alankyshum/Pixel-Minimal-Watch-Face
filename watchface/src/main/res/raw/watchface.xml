@@ -207,7 +207,7 @@
         </Flavors>
     </UserConfigurations>
     <Scene>
-        <!-- Seconds Indicator -->
+        <!-- Hour Animation; secIndicator ID remains for persisted configurations. -->
         <BooleanConfiguration id="secIndicator">
             <BooleanOption id="TRUE">
                 <PartDraw height="448" width="224" x="225" y="1"
@@ -215,8 +215,8 @@
                     pivotX="0"
                     pivotY="0.5">
                     <Variant mode="AMBIENT" target="alpha" value="0" />
-                    <Transform target="angle" value="[SECOND] * 6">
-                        <Animation duration="1"/>
+                    <Transform target="angle" value="[HOUR_0_11] * 30 + [MINUTE] * 0.5">
+                        <Animation duration="0.4" repeat="0" angleDirection="CLOCKWISE"/>
                     </Transform>
                     <Arc centerX="0"
                         centerY="224"
@@ -306,7 +306,7 @@
                 </Group>
                 <PartText name="text" width="110" height="40" x="10" y="43">
                     <Text ellipsis="TRUE">
-                        <Font family="orbitron_wght" size="24" color="[CONFIGURATION.themeColor.0]">
+                        <Font family="orbitron_wght" size="24" color="[CONFIGURATION.themeColor.0]" letterSpacing="-0.05">
                             <Template>%s
                                 <Parameter expression="[COMPLICATION.TEXT]"/>
                             </Template>
@@ -322,7 +322,7 @@
                 </PartDraw>
                 <PartText name="date" height="38" width="130" x="0" y="24">
                     <Text align="CENTER" ellipsis="TRUE">
-                        <Font color="[CONFIGURATION.themeColor.0]" family="orbitron_wght" size="24">
+                        <Font color="[CONFIGURATION.themeColor.0]" family="orbitron_wght" size="24" letterSpacing="-0.05">
                             <Template>%s<Parameter expression='icuText("MM/dd", [UTC_TIMESTAMP])' /></Template>
                         </Font>
                     </Text>
@@ -330,7 +330,7 @@
                 </PartText>
                 <PartText name="weekday" height="34" width="130" x="0" y="67">
                     <Text align="CENTER" ellipsis="TRUE">
-                        <Font color="[CONFIGURATION.themeColor.0]" family="orbitron_wght" size="21">
+                        <Font color="[CONFIGURATION.themeColor.0]" family="orbitron_wght" size="21" letterSpacing="-0.05">
                             <Upper><Template>%s<Parameter expression='icuText("EEE", [UTC_TIMESTAMP])' /></Template></Upper>
                         </Font>
                     </Text>
@@ -452,7 +452,7 @@
                 </Group>
                 <PartText name="text" width="110" height="40" x="10" y="43">
                     <Text ellipsis="TRUE">
-                        <Font family="orbitron_wght" size="24" color="[CONFIGURATION.themeColor.0]">
+                        <Font family="orbitron_wght" size="24" color="[CONFIGURATION.themeColor.0]" letterSpacing="-0.05">
                             <Template>%s
                                 <Parameter expression="[COMPLICATION.TEXT]"/>
                             </Template>
@@ -488,7 +488,7 @@
                         </Group>
                         <PartText name="text" height="40" width="130" x="0" y="44">
                             <Text ellipsis="TRUE">
-                                <Font family="orbitron_wght" size="26">
+                                <Font family="orbitron_wght" size="26" letterSpacing="-0.05">
                                     <Template>%s
                                         <Parameter expression="[COMPLICATION.TEXT]" />
                                     </Template>
@@ -499,7 +499,7 @@
                             <Text  ellipsis="TRUE">
                                 <Font color="[CONFIGURATION.themeColor.1]"
                                      family="orbitron_wght"
-                                     size="22">
+                                     size="22" letterSpacing="-0.05">
                                     <Template>%s
                                         <Parameter expression="[COMPLICATION.TITLE]" />
                                     </Template>
@@ -520,7 +520,7 @@
                         </Group>
                         <PartText name="text" height="40" width="130" x="0" y="62">
                             <Text ellipsis="TRUE">
-                                <Font family="orbitron_wght" size="27" color="[CONFIGURATION.themeColor.0]">
+                                <Font family="orbitron_wght" size="27" color="[CONFIGURATION.themeColor.0]" letterSpacing="-0.05">
                                     <Template>%s
                                         <Parameter expression="[COMPLICATION.TEXT]" />
                                     </Template>
@@ -533,7 +533,7 @@
                             <Text ellipsis="TRUE">
                                 <Font color="[CONFIGURATION.themeColor.1]"
                                      family="orbitron_wght"
-                                     size="22">
+                                     size="22" letterSpacing="-0.05">
                                     <Template>%s
                                         <Parameter expression="[COMPLICATION.TITLE]" />
                                     </Template>
@@ -542,7 +542,7 @@
                         </PartText>
                         <PartText name="text" height="40" width="130" x="0" y="62">
                             <Text  ellipsis="TRUE">
-                                <Font family="orbitron_wght" size="26" color="[CONFIGURATION.themeColor.0]">
+                                <Font family="orbitron_wght" size="26" color="[CONFIGURATION.themeColor.0]" letterSpacing="-0.05">
                                     <Template>%s
                                         <Parameter expression="[COMPLICATION.TEXT]" />
                                     </Template>
@@ -555,7 +555,7 @@
                             <Text  ellipsis="TRUE">
                                 <Font color="[CONFIGURATION.themeColor.1]"
                                      family="orbitron_wght"
-                                     size="26">
+                                     size="26" letterSpacing="-0.05">
                                     <Template>%s
                                         <Parameter expression="[COMPLICATION.TEXT]" />
                                     </Template>
@@ -683,38 +683,91 @@
         <ComplicationSlot slotId="3"
             displayName="slot_3"
             supportedTypes="SHORT_TEXT LONG_TEXT EMPTY"
-            x="97"
-            y="355"
-            width="256"
-            height="46">
+            x="24"
+            y="300"
+            width="402"
+            height="150">
             <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 0 ? 165 : 0" />
             <DefaultProviderPolicy defaultSystemProvider="DAY_AND_DATE" defaultSystemProviderType="SHORT_TEXT"/>
-            <BoundingRoundBox cornerRadius="15" width="258" height="48" x="-1" y="-1" />
+            <!-- One crop arc covers both 40px ink bands (140..225px), including Arc A plus a conservative 13px angular ink margin. -->
+            <BoundingArc centerX="201" centerY="-75" width="365" height="365" startAngle="259" endAngle="101" direction="COUNTER_CLOCKWISE" thickness="85" />
             <Complication type="SHORT_TEXT">
                 <Condition>
-                    <Expressions><Expression name="combinedBatt"><![CDATA[subText([COMPLICATION.TEXT],0,1) == ﻿]]></Expression></Expressions>
+                    <Expressions>
+                        <!-- U+FEFF (ZERO WIDTH NO-BREAK SPACE) is the invisible combined-battery sentinel. -->
+                        <Expression name="combinedBatt"><![CDATA[subText([COMPLICATION.TEXT],0,1) == ﻿]]></Expression>
+                    </Expressions>
                     <Compare expression="combinedBatt">
-                        <PartText width="256" height="46" x="0" y="0">
-                            <Text align="CENTER" ellipsis="TRUE">
-                                <Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="32" letterSpacing="-0.05">
-                                    <InlineImage color="[CONFIGURATION.themeColor.1]" resource="empty_icon" source="COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT" width="32" height="32" />
-                                    <Template><![CDATA[ %s  ]]><Parameter expression="[BATTERY_PERCENT]" /></Template>
-                                    <InlineImage color="[CONFIGURATION.themeColor.1]" resource="empty_icon" source="COMPLICATION.MONOCHROMATIC_IMAGE" width="32" height="32" />
-                                    <Template><![CDATA[ %s]]><Parameter expression="subText([COMPLICATION.TEXT],1,4)==100?100:(subText([COMPLICATION.TEXT],1,3))" /></Template>
+                        <PartText width="422" height="196" x="-11" y="-23">
+                            <TextCircular centerX="212" centerY="-52" width="410" height="410" startAngle="251.5" endAngle="108.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE">
+                                <Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05">
+                                    <Template><![CDATA[%s · %s]]><Parameter expression="[BATTERY_PERCENT]"/><Parameter expression="subText([COMPLICATION.TEXT],1,4)==100?100:(subText([COMPLICATION.TEXT],1,3))"/></Template>
                                 </Font>
-                            </Text>
+                            </TextCircular>
                         </PartText>
                     </Compare>
-                    <Default><Group name="bottom_normal_text" width="256" height="46" x="0" y="0"><ListConfiguration id="bottomComplicationFontSize"><ListOption id="18"><PartText width="256" height="46" x="0" y="0"><Text align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></Text></PartText></ListOption><ListOption id="22"><PartText width="256" height="46" x="0" y="0"><Text align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></Text></PartText></ListOption><ListOption id="26"><PartText width="256" height="46" x="0" y="0"><Text align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></Text></PartText></ListOption></ListConfiguration></Group></Default>
+                    <Default>
+                        <Condition>
+                            <Expressions><Expression name="hasTitle"><![CDATA[textLength([COMPLICATION.TITLE]) > 0]]></Expression></Expressions>
+                            <Compare expression="hasTitle">
+                                <Group name="bottom_short_two_lines" width="402" height="150" x="0" y="0">
+                                    <ListConfiguration id="bottomComplicationFontSize">
+                                          <ListOption id="18"><Group name="bottom_short_paths_18" width="402" height="150" x="0" y="0"><PartText width="302" height="105" x="50" y="-5"><TextCircular centerX="151" centerY="-70" width="320" height="320" startAngle="238.5" endAngle="121.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TEXT],0,20)"/></Template></Font></TextCircular></PartText><PartText width="422" height="196" x="-11" y="-23"><TextCircular centerX="212" centerY="-52" width="410" height="410" startAngle="251.5" endAngle="108.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TITLE],0,23)"/></Template></Font></TextCircular></PartText></Group></ListOption>
+                                          <ListOption id="22"><Group name="bottom_short_paths_22" width="402" height="150" x="0" y="0"><PartText width="302" height="105" x="50" y="-5"><TextCircular centerX="151" centerY="-70" width="320" height="320" startAngle="238.5" endAngle="121.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TEXT],0,20)"/></Template></Font></TextCircular></PartText><PartText width="422" height="196" x="-11" y="-23"><TextCircular centerX="212" centerY="-52" width="410" height="410" startAngle="251.5" endAngle="108.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TITLE],0,23)"/></Template></Font></TextCircular></PartText></Group></ListOption>
+                                           <ListOption id="26"><Group name="bottom_short_paths_26" width="402" height="150" x="0" y="0"><PartText width="302" height="105" x="50" y="-5"><TextCircular centerX="151" centerY="-70" width="320" height="320" startAngle="238.5" endAngle="121.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TEXT],0,20)"/></Template></Font></TextCircular></PartText><PartText width="422" height="196" x="-11" y="-23"><TextCircular centerX="212" centerY="-52" width="410" height="410" startAngle="251.5" endAngle="108.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TITLE],0,23)"/></Template></Font></TextCircular></PartText></Group></ListOption>
+                                    </ListConfiguration>
+                                </Group>
+                            </Compare>
+                            <Default>
+                        <Group name="bottom_short_one_line" width="402" height="150" x="0" y="0">
+                            <ListConfiguration id="bottomComplicationFontSize">
+                                <ListOption id="18"><PartText width="422" height="196" x="-11" y="-23"><TextCircular centerX="212" centerY="-52" width="410" height="410" startAngle="251.5" endAngle="108.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TEXT],0,23)"/></Template></Font></TextCircular></PartText></ListOption>
+                                <ListOption id="22"><PartText width="422" height="196" x="-11" y="-23"><TextCircular centerX="212" centerY="-52" width="410" height="410" startAngle="251.5" endAngle="108.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TEXT],0,23)"/></Template></Font></TextCircular></PartText></ListOption>
+                                <ListOption id="26"><PartText width="422" height="196" x="-11" y="-23"><TextCircular centerX="212" centerY="-52" width="410" height="410" startAngle="251.5" endAngle="108.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TEXT],0,23)"/></Template></Font></TextCircular></PartText></ListOption>
+                            </ListConfiguration>
+                        </Group></Default></Condition>
+                    </Default>
                 </Condition>
             </Complication>
             <Complication type="LONG_TEXT">
                 <Condition>
-                    <Expressions><Expression name="notificationsRow"><![CDATA[[COMPLICATION.TEXT] == "---"]]></Expression></Expressions>
+                    <Expressions>
+                        <Expression name="notificationsRow"><![CDATA[[COMPLICATION.TEXT] == "---" && textLength([COMPLICATION.TITLE]) == 0]]></Expression>
+                    </Expressions>
                     <Compare expression="notificationsRow">
-                        <PartImage width="256" height="32" x="0" y="7" tintColor="[CONFIGURATION.themeColor.1]"><Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]"/></PartImage>
+                        <PartImage width="32" height="32" x="185" y="104" tintColor="[CONFIGURATION.themeColor.1]"><Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]"/></PartImage>
                     </Compare>
-                    <Default><Group name="bottom_normal_text" width="256" height="46" x="0" y="0"><ListConfiguration id="bottomComplicationFontSize"><ListOption id="18"><PartText width="256" height="46" x="0" y="0"><Text align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></Text></PartText></ListOption><ListOption id="22"><PartText width="256" height="46" x="0" y="0"><Text align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></Text></PartText></ListOption><ListOption id="26"><PartText width="256" height="46" x="0" y="0"><Text align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></Text></PartText></ListOption></ListConfiguration></Group></Default>
+                    <Default>
+                        <Condition>
+                            <Expressions><Expression name="hasTitle"><![CDATA[textLength([COMPLICATION.TITLE]) > 0]]></Expression></Expressions>
+                            <Compare expression="hasTitle">
+                                <!-- TEXT is the read-first inner line; TITLE is the outer line. -->
+                                <Group name="bottom_long_two_lines" width="402" height="150" x="0" y="0"><ListConfiguration id="bottomComplicationFontSize">
+                                     <ListOption id="18"><Group name="bottom_long_path_0" width="402" height="150" x="0" y="0"><PartText width="302" height="105" x="50" y="-5"><TextCircular centerX="151" centerY="-70" width="320" height="320" startAngle="238.5" endAngle="121.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TEXT],0,20)"/></Template></Font></TextCircular></PartText><PartText width="422" height="196" x="-11" y="-23"><TextCircular centerX="212" centerY="-52" width="410" height="410" startAngle="251.5" endAngle="108.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TITLE],0,23)"/></Template></Font></TextCircular></PartText></Group></ListOption>
+                                           <ListOption id="22"><Group name="bottom_long_path_1" width="402" height="150" x="0" y="0"><PartText width="302" height="105" x="50" y="-5"><TextCircular centerX="151" centerY="-70" width="320" height="320" startAngle="238.5" endAngle="121.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TEXT],0,20)"/></Template></Font></TextCircular></PartText><PartText width="422" height="196" x="-11" y="-23"><TextCircular centerX="212" centerY="-52" width="410" height="410" startAngle="251.5" endAngle="108.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TITLE],0,23)"/></Template></Font></TextCircular></PartText></Group></ListOption>
+                                           <ListOption id="26"><Group name="bottom_long_path_2" width="402" height="150" x="0" y="0"><PartText width="302" height="105" x="50" y="-5"><TextCircular centerX="151" centerY="-70" width="320" height="320" startAngle="238.5" endAngle="121.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TEXT],0,20)"/></Template></Font></TextCircular></PartText><PartText width="422" height="196" x="-11" y="-23"><TextCircular centerX="212" centerY="-52" width="410" height="410" startAngle="251.5" endAngle="108.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TITLE],0,23)"/></Template></Font></TextCircular></PartText></Group></ListOption>
+                                </ListConfiguration></Group>
+                            </Compare>
+                            <Default>
+                                <Condition>
+                                    <Expressions><Expression name="exceedsOuterBudget"><![CDATA[textLength([COMPLICATION.TEXT]) > 23]]></Expression></Expressions>
+                                    <Compare expression="exceedsOuterBudget">
+                                <!-- Fixed-position split: WFF has no word-boundary search; hyphen makes a mid-word break explicit. -->
+                                <Group name="bottom_long_fixed_split" width="402" height="150" x="0" y="0"><ListConfiguration id="bottomComplicationFontSize">
+                                    <ListOption id="18"><Group name="bottom_long_path_3" width="402" height="150" x="0" y="0"><PartText width="302" height="105" x="50" y="-5"><TextCircular centerX="151" centerY="-70" width="320" height="320" startAngle="238.5" endAngle="121.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template>%s-<Parameter expression="subText([COMPLICATION.TEXT],0,18)"/></Template></Font></TextCircular></PartText><PartText width="422" height="196" x="-11" y="-23"><TextCircular centerX="212" centerY="-52" width="410" height="410" startAngle="251.5" endAngle="108.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TEXT],18,41)"/></Template></Font></TextCircular></PartText></Group></ListOption>
+                                    <ListOption id="22"><Group name="bottom_long_path_4" width="402" height="150" x="0" y="0"><PartText width="302" height="105" x="50" y="-5"><TextCircular centerX="151" centerY="-70" width="320" height="320" startAngle="238.5" endAngle="121.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template>%s-<Parameter expression="subText([COMPLICATION.TEXT],0,18)"/></Template></Font></TextCircular></PartText><PartText width="422" height="196" x="-11" y="-23"><TextCircular centerX="212" centerY="-52" width="410" height="410" startAngle="251.5" endAngle="108.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TEXT],18,41)"/></Template></Font></TextCircular></PartText></Group></ListOption>
+                                    <ListOption id="26"><Group name="bottom_long_path_5" width="402" height="150" x="0" y="0"><PartText width="302" height="105" x="50" y="-5"><TextCircular centerX="151" centerY="-70" width="320" height="320" startAngle="238.5" endAngle="121.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template>%s-<Parameter expression="subText([COMPLICATION.TEXT],0,18)"/></Template></Font></TextCircular></PartText><PartText width="422" height="196" x="-11" y="-23"><TextCircular centerX="212" centerY="-52" width="410" height="410" startAngle="251.5" endAngle="108.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TEXT],18,41)"/></Template></Font></TextCircular></PartText></Group></ListOption>
+                                </ListConfiguration></Group>
+                                    </Compare>
+                                    <Default><Group name="bottom_long_one_line" width="402" height="150" x="0" y="0"><ListConfiguration id="bottomComplicationFontSize">
+                                         <ListOption id="18"><PartText width="422" height="196" x="-11" y="-23"><TextCircular centerX="212" centerY="-52" width="410" height="410" startAngle="251.5" endAngle="108.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TEXT],0,23)"/></Template></Font></TextCircular></PartText></ListOption>
+                                         <ListOption id="22"><PartText width="422" height="196" x="-11" y="-23"><TextCircular centerX="212" centerY="-52" width="410" height="410" startAngle="251.5" endAngle="108.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TEXT],0,23)"/></Template></Font></TextCircular></PartText></ListOption>
+                                         <ListOption id="26"><PartText width="422" height="196" x="-11" y="-23"><TextCircular centerX="212" centerY="-52" width="410" height="410" startAngle="251.5" endAngle="108.5" direction="COUNTER_CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template>%s<Parameter expression="subText([COMPLICATION.TEXT],0,23)"/></Template></Font></TextCircular></PartText></ListOption>
+                                    </ListConfiguration></Group></Default>
+                                </Condition>
+                            </Default>
+                        </Condition>
+                    </Default>
                 </Condition>
             </Complication>
             <Complication type="EMPTY" />
@@ -733,18 +786,18 @@
             <Complication type="SHORT_TEXT">
                 <Group name="second_top_short_text" width="256" height="80" x="0" y="0">
                     <ListConfiguration id="topComplicationFontSize">
-                        <ListOption id="18"><PartText width="450" height="450" x="-97" y="-57"><TextCircular centerX="225" centerY="225" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></TextCircular></PartText></ListOption>
-                        <ListOption id="22"><PartText width="450" height="450" x="-97" y="-57"><TextCircular centerX="225" centerY="225" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></TextCircular></PartText></ListOption>
-                        <ListOption id="26"><PartText width="450" height="450" x="-97" y="-57"><TextCircular centerX="225" centerY="225" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></TextCircular></PartText></ListOption>
+                        <ListOption id="18"><PartText width="256" height="85" x="0" y="-5"><TextCircular centerX="128" centerY="173" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></TextCircular></PartText></ListOption>
+                        <ListOption id="22"><PartText width="256" height="85" x="0" y="-5"><TextCircular centerX="128" centerY="173" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></TextCircular></PartText></ListOption>
+                        <ListOption id="26"><PartText width="256" height="85" x="0" y="-5"><TextCircular centerX="128" centerY="173" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></TextCircular></PartText></ListOption>
                     </ListConfiguration>
                 </Group>
             </Complication>
             <Complication type="LONG_TEXT">
                 <Group name="second_top_long_text" width="256" height="80" x="0" y="0">
                     <ListConfiguration id="topComplicationFontSize">
-                        <ListOption id="18"><PartText width="450" height="450" x="-97" y="-57"><TextCircular centerX="225" centerY="225" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
-                        <ListOption id="22"><PartText width="450" height="450" x="-97" y="-57"><TextCircular centerX="225" centerY="225" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
-                        <ListOption id="26"><PartText width="450" height="450" x="-97" y="-57"><TextCircular centerX="225" centerY="225" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                        <ListOption id="18"><PartText width="256" height="85" x="0" y="-5"><TextCircular centerX="128" centerY="173" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="18" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                        <ListOption id="22"><PartText width="256" height="85" x="0" y="-5"><TextCircular centerX="128" centerY="173" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="22" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
+                        <ListOption id="26"><PartText width="256" height="85" x="0" y="-5"><TextCircular centerX="128" centerY="173" width="320" height="320" startAngle="315" endAngle="45" direction="CLOCKWISE" align="CENTER" ellipsis="TRUE"><Font color="[CONFIGURATION.themeColor.0]" family="SYNC_TO_DEVICE" size="26" letterSpacing="-0.05"><Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]"/><Parameter expression="[COMPLICATION.TITLE]"/></Template></Font></TextCircular></PartText></ListOption>
                     </ListConfiguration>
                 </Group>
             </Complication>
@@ -760,13 +813,13 @@
                 align="CENTER" x="0" y="75"
                 width="250" height="180">
                 <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.hollowAOD] == 0 ? 255 : 0" />
-                <Font color="#fafafa" size="112" family="orbitron_wght" weight="MEDIUM"/>
+                <Font color="#fafafa" size="112" family="nova_mono" weight="NORMAL"/>
             </TimeText>
             <TimeText format="mm" hourFormat="SYNC_TO_DEVICE"
                 align="CENTER" x="0" y="191"
                 width="250" height="180">
                 <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.hollowAOD] == 0 ? 255 : 0" />
-                <Font color="#fafafa" size="112" family="orbitron_wght" weight="MEDIUM"/>
+                <Font color="#fafafa" size="112" family="nova_mono" weight="NORMAL"/>
             </TimeText>
             <!-- Hollow -->
             <TimeText format="hh" hourFormat="SYNC_TO_DEVICE"
@@ -774,14 +827,14 @@
                 width="250" height="180"
                 alpha="0">
                 <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.hollowAOD] == 1 ? 255 : 0" />
-                <Font color="#fafafa" size="112" family="orbitron_wght" weight="MEDIUM"/>
+                <Font color="#fafafa" size="112" family="nova_mono" weight="NORMAL"/>
             </TimeText>
             <TimeText format="mm" hourFormat="SYNC_TO_DEVICE"
                 align="CENTER" x="0" y="191"
                 width="250" height="180"
                 alpha="0">
                 <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.hollowAOD] == 1 ? 255 : 0" />
-                <Font color="#fafafa" size="112" family="orbitron_wght" weight="MEDIUM"/>
+                <Font color="#fafafa" size="112" family="nova_mono" weight="NORMAL"/>
             </TimeText>
         </DigitalClock>
     </Scene>

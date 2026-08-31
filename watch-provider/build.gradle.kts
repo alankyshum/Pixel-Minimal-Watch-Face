@@ -10,6 +10,4 @@ dependencies {
     implementation(project(":shared-protocol"))
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
     implementation("androidx.wear.watchface:watchface-complications-data-source:1.2.1")
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 }
