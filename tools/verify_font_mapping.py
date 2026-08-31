@@ -1,223 +1,216 @@
 #!/usr/bin/env python3
-"""Assert the fixed v1.0.14 font mapping and non-font WFF invariants."""
+"""Fail-closed verification for Nova Mono, WFF v2 arcs, and hour animation."""
 
 from __future__ import annotations
 
 import hashlib
 import math
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 WATCHFACE = ROOT / "watchface/src/main/res/raw/watchface.xml"
-SLOT_SNAPSHOTS = {
+NOVA_MONO = ROOT / "watchface/src/main/res/font/nova_mono.ttf"
+NOVA_MONO_SHA256 = "648eadb6648c0801b186d3dcef60ee6aa84a791b1e09c726935c0712508b4807"
+HOUR_INDICATOR_FORMULA = "[HOUR_0_11] * 30 + [MINUTE] * 0.5"
+UNRELATED_SLOT_SNAPSHOTS = {
     "0": "db6264d8e566bd140fd14642f8131a7ce10d7ca5287e9d1e0d1ee39f87cd9681",
     "1": "27c959502dfbbd256eb95a423e9554fa81c224c1c0e7dcd9ef6dd32cf9c0be58",
     "2": "f996e4d58bdbac4392a0889bbbb1194b8aee660d242a57cc0623028b9ef25c36",
-    "3": "f593a4b6fe0f2d031bcae70dfcc0133f7e2cb1847eac7caf3651e67b73173f4c",
-    "4": "fb10c55af69d5eda2d4c5a130198352e009f5032f2dfa2739e46d41244de76a6",
 }
-CLOCK_SNAPSHOT = "dc5876b4c79e8ab0a74230e900e02ee23a7d77b0dac155b8ed9e643767935be9"
-
-
-def fonts(element: ET.Element) -> list[tuple[str | None, str | None, str | None]]:
-    return [(font.get("family"), font.get("size"), font.get("letterSpacing")) for font in element.findall(".//Font")]
-
-
-def serialized(element: ET.Element | None) -> bytes:
-    assert element is not None
-    return ET.tostring(element)
 
 
 def snapshot(slot: ET.Element) -> str:
-    """Hash a slot after removing only its approved top/bottom font mapping."""
-    normalized = ET.fromstring(serialized(slot))
-    if normalized.get("slotId") in ("2", "3", "4"):
-        for font in normalized.findall(".//Font"):
+    """Pin unrelated slot behavior while allowing this change's font work."""
+    normalized = ET.fromstring(ET.tostring(slot))
+    for font in normalized.findall(".//Font"):
+        font.attrib.pop("letterSpacing", None)
+        if normalized.get("slotId") in {"2", "4"}:
             font.attrib.pop("family", None)
-            font.attrib.pop("letterSpacing", None)
-    return hashlib.sha256(serialized(normalized)).hexdigest()
+    return hashlib.sha256(ET.tostring(normalized)).hexdigest()
 
 
-def bounding_arc(slot: ET.Element) -> dict[str, float | str]:
-    """Parse a slot-local BoundingArc into global-center arc geometry."""
-    arc = slot.find("BoundingArc")
-    assert arc is not None, f"slot {slot.get('slotId')} needs BoundingArc"
-    return {
-        "center_x": float(slot.attrib["x"]) + float(arc.attrib["centerX"]),
-        "center_y": float(slot.attrib["y"]) + float(arc.attrib["centerY"]),
-        "radius": float(arc.attrib["width"]) / 2,
-        "height": float(arc.attrib["height"]),
-        "start": float(arc.attrib["startAngle"]),
-        "end": float(arc.attrib["endAngle"]),
-        "thickness": float(arc.attrib["thickness"]),
-        "direction": arc.attrib["direction"],
-    }
+def part_for(slot: ET.Element, text: ET.Element) -> ET.Element:
+    return next(part for part in slot.iter("PartText") if text in list(part))
 
 
-def angle_in_arc(angle: float, arc: dict[str, float | str]) -> bool:
-    """Return whether an angle lies in this clockwise arc (including endpoints)."""
-    start, end = float(arc["start"]), float(arc["end"])
-    return start <= end and start <= angle <= end or start > end and (angle >= start or angle <= end)
+def global_center(slot: ET.Element, part: ET.Element, text: ET.Element) -> tuple[float, float]:
+    return (float(slot.get("x")) + float(part.get("x")) + float(text.get("centerX")),
+            float(slot.get("y")) + float(part.get("y")) + float(text.get("centerY")))
 
 
-def max_configured_top_font_size(slot: ET.Element) -> float:
-    """Read the largest option in the shared top-complication size setting."""
-    sizes = [
-        float(font.attrib["size"])
-        for config in slot.findall(".//ListConfiguration[@id='topComplicationFontSize']")
-        for font in config.findall(".//Font")
-    ]
-    assert sizes, f"slot {slot.get('slotId')} has no top font-size configuration"
-    return max(sizes)
+def sweep_angles(text: ET.Element) -> list[float]:
+    """Return endpoints and cardinal extrema that fall on this WFF sweep."""
+    start, end = map(float, (text.get("startAngle"), text.get("endAngle")))
+    if text.get("direction") == "CLOCKWISE":
+        end += 360 if end < start else 0
+        return [start, end] + [a for a in (0, 90, 180, 270, 360) if start <= a <= end]
+    start += 360 if start < end else 0
+    return [start, end] + [a for a in (0, 90, 180, 270, 360) if end <= a <= start]
 
 
-def path_ink_margin(text: ET.Element, slot: ET.Element) -> float:
-    """Cover the shared top font setting and any inline image on a text path."""
-    font_half_size = max(float(font.attrib["size"]) / 2 for font in text.findall(".//Font"))
-    inline_half_size = max(
-        (max(float(image.attrib["width"]), float(image.attrib["height"])) / 2 for image in text.findall(".//InlineImage")),
-        default=0.0,
-    )
-    return max(max_configured_top_font_size(slot) / 2, font_half_size, inline_half_size)
+def path_bounds(part: ET.Element, text: ET.Element) -> None:
+    """The complete circular sweep plus 26px ink stays in its individual raster."""
+    r, ink = float(text.get("width")) / 2, 13
+    cx, cy = float(text.get("centerX")), float(text.get("centerY"))
+    points = [(r * math.sin(math.radians(a)), -r * math.cos(math.radians(a))) for a in sweep_angles(text)]
+    assert min(cx + x - ink for x, _ in points) >= 0
+    assert max(cx + x + ink for x, _ in points) <= float(part.get("width"))
+    assert min(cy + y - ink for _, y in points) >= 0
+    assert max(cy + y + ink for _, y in points) <= float(part.get("height"))
 
 
-def assert_box_in_arc(box: ET.Element, slot: ET.Element, arc: dict[str, float | str]) -> None:
-    """Assert every global corner of an axis-aligned PartImage is in its BoundingArc."""
-    slot_x, slot_y = float(slot.attrib["x"]), float(slot.attrib["y"])
-    x, y = slot_x + float(box.attrib["x"]), slot_y + float(box.attrib["y"])
-    for point_x, point_y in ((x, y), (x + float(box.attrib["width"]), y), (x, y + float(box.attrib["height"])), (x + float(box.attrib["width"]), y + float(box.attrib["height"]))):
-        dx, dy = point_x - float(arc["center_x"]), point_y - float(arc["center_y"])
-        radius = math.hypot(dx, dy)
-        angle = math.degrees(math.atan2(dx, -dy)) % 360
-        assert float(arc["radius"]) - float(arc["thickness"]) / 2 <= radius <= float(arc["radius"]) + float(arc["thickness"]) / 2
-        assert angle_in_arc(angle, arc)
+def parameters(text: ET.Element) -> list[str]:
+    return [p.get("expression", "") for p in text.findall("Font/Template/Parameter")]
+
+
+def normal_options(branch: ET.Element) -> list[ET.Element]:
+    options = branch.findall(".//ListOption")
+    assert [o.get("id") for o in options] == ["18", "22", "26"]
+    return options
+
+
+def assert_paths(slot: ET.Element, options: list[ET.Element], *, one_line: bool = False, split: bool = False) -> None:
+    for option in options:
+        paths = option.findall(".//TextCircular")
+        assert len(paths) == (1 if one_line else 2)
+        for text in paths:
+            part = part_for(slot, text)
+            assert len(part.findall("TextCircular")) == 1
+            assert global_center(slot, part, text) == (225.0, 225.0)
+            assert text.get("direction") == "COUNTER_CLOCKWISE"
+            assert text.get("align") == "CENTER" and text.get("ellipsis") == "TRUE"
+            assert float(text.find("Font").get("size")) in {18, 22, 26}
+            path_bounds(part, text)
+        if one_line:
+            assert (paths[0].get("width"), paths[0].get("startAngle"), paths[0].get("endAngle")) == ("410", "251.5", "108.5")
+            assert parameters(paths[0]) == ["subText([COMPLICATION.TEXT],0,23)"]
+        else:
+            assert [(p.get("width"), p.get("startAngle"), p.get("endAngle")) for p in paths] == [("320", "238.5", "121.5"), ("410", "251.5", "108.5")]
+            expected = (["subText([COMPLICATION.TEXT],0,18)"], ["subText([COMPLICATION.TEXT],18,41)"]) if split else (["subText([COMPLICATION.TEXT],0,20)"], ["subText([COMPLICATION.TITLE],0,23)"])
+            assert [parameters(p) for p in paths] == list(expected)
+            if split:
+                assert paths[0].find("Font/Template").text == "%s-"
 
 
 def main() -> int:
-    current = ET.parse(WATCHFACE).getroot()
-    slots = {slot.get("slotId"): slot for slot in current.findall(".//ComplicationSlot")}
-    assert set(slots) == set(SLOT_SNAPSHOTS)
+    if sys.flags.optimize:
+        raise RuntimeError("verify_font_mapping.py must not run with Python optimization enabled")
+    root = ET.parse(WATCHFACE).getroot()
+    assert hashlib.sha256(NOVA_MONO.read_bytes()).hexdigest() == NOVA_MONO_SHA256
+    assert all(e.get("direction") in {"CLOCKWISE", "COUNTER_CLOCKWISE"} for e in root.iter() if e.get("direction"))
+    clock_fonts = root.findall(".//DigitalClock//Font")
+    assert len(clock_fonts) == 4 and all(f.attrib == {"color":"#fafafa", "size":"112", "family":"nova_mono", "weight":"NORMAL"} for f in clock_fonts)
+    slots = {slot.get("slotId"): slot for slot in root.findall(".//ComplicationSlot")}
+    assert set(slots) == {"0", "1", "2", "3", "4"}
+    for slot_id, expected in UNRELATED_SLOT_SNAPSHOTS.items():
+        assert snapshot(slots[slot_id]) == expected, f"unrelated slot {slot_id} behavior changed"
+    for slot_id in ("0", "1"):
+        assert all(font.get("letterSpacing") == "-0.05" for font in slots[slot_id].findall(".//PartText//Font"))
+    assert all(font.get("letterSpacing") == "-0.05" for font in root.findall(".//PartText//Font"))
 
-    assert fonts(slots["0"]) == [("orbitron_wght", "24", None), ("orbitron_wght", "24", None), ("orbitron_wght", "21", None)]
-    assert fonts(slots["1"]) == [("orbitron_wght", "24", None), ("orbitron_wght", "26", None), ("orbitron_wght", "22", None), ("orbitron_wght", "27", None), ("orbitron_wght", "22", None), ("orbitron_wght", "26", None), ("orbitron_wght", "26", None)]
-    for slot_id in ("2", "3"):
-        expected_sizes = ["32", "18", "22", "26", "18", "22", "26"]
-        assert fonts(slots[slot_id]) == [("SYNC_TO_DEVICE", size, "-0.05") for size in expected_sizes]
-    assert slots["4"].attrib == {
-        "slotId": "4", "displayName": "slot_4", "supportedTypes": "SHORT_TEXT LONG_TEXT EMPTY",
-        "x": "97", "y": "57", "width": "256", "height": "80",
+    indicator = root.find(".//Scene/BooleanConfiguration[@id='secIndicator']/BooleanOption/PartDraw")
+    assert indicator is not None and indicator.find("Variant").attrib == {"mode":"AMBIENT", "target":"alpha", "value":"0"}
+    transform = indicator.find("Transform")
+    assert transform is not None and transform.get("value") == HOUR_INDICATOR_FORMULA
+    assert {key: indicator.get(key) for key in ("x", "y", "pivotX", "pivotY")} == {
+        "x": "225", "y": "1", "pivotX": "0", "pivotY": "0.5"
     }
-    assert slots["4"].find("DefaultProviderPolicy") is None
-    assert slots["2"].attrib["height"] == "112"
-    outer_arc, inner_arc = bounding_arc(slots["2"]), bounding_arc(slots["4"])
-    assert outer_arc == {
-        "center_x": 225.0, "center_y": 225.0, "radius": 205.0, "height": 410.0,
-        "start": 295.0, "end": 65.0, "thickness": 40.0, "direction": "CLOCKWISE",
-    }
-    assert inner_arc == {
-        "center_x": 225.0, "center_y": 225.0, "radius": 160.0, "height": 320.0,
-        "start": 305.0, "end": 55.0, "thickness": 40.0, "direction": "CLOCKWISE",
-    }
-    assert fonts(slots["4"]) == [("SYNC_TO_DEVICE", size, "-0.05") for size in ["18", "22", "26"] * 2]
-    for slot_id, arc in (("2", outer_arc), ("4", inner_arc)):
-        for text in slots[slot_id].findall(".//TextCircular"):
-            part = next(part for part in slots[slot_id].iter("PartText") if part.find(".//TextCircular") is text)
-            diameter = float(text.attrib["width"])
-            assert diameter == float(text.attrib["height"])
-            slot_x, slot_y = float(slots[slot_id].attrib["x"]), float(slots[slot_id].attrib["y"])
-            center_x = slot_x + float(part.attrib["x"]) + float(text.attrib["centerX"])
-            center_y = slot_y + float(part.attrib["y"]) + float(text.attrib["centerY"])
-            radius = diameter / 2
-            radial_ink_margin = path_ink_margin(text, slots[slot_id])
-            angular_ink_margin = math.degrees(math.asin(radial_ink_margin / radius))
-            assert (center_x, center_y) == (arc["center_x"], arc["center_y"])
-            assert radius + radial_ink_margin <= arc["radius"] + arc["thickness"] / 2
-            assert radius - radial_ink_margin >= arc["radius"] - arc["thickness"] / 2
-            assert arc["start"] <= float(text.attrib["startAngle"]) - angular_ink_margin
-            assert arc["end"] >= float(text.attrib["endAngle"]) + angular_ink_margin
-
-    for complication_type, expected_template, expected_parameters in (
-        ("SHORT_TEXT", "%s", ["[COMPLICATION.TEXT]"]),
-        ("LONG_TEXT", "%s %s", ["[COMPLICATION.TEXT]", "[COMPLICATION.TITLE]"]),
+    indicator_xml = ET.tostring(indicator, encoding="unicode")
+    assert "SECOND" not in indicator_xml
+    for clock_time, hour, minute, expected_angle in (
+        ("09:00", 9, 0, 270),
+        ("09:30", 9, 30, 285),
+        ("09:59", 9, 59, 299.5),
+        ("11:59", 11, 59, 359.5),
+        ("12:00", 0, 0, 0),
     ):
-        slot_4_texts = slots["4"].findall(f"Complication[@type='{complication_type}']//TextCircular")
-        assert len(slot_4_texts) == 3, f"slot 4 {complication_type} needs all three font-size branches"
-        for text in slot_4_texts:
-            assert text.attrib == {
-            "centerX": "225", "centerY": "225", "width": "320", "height": "320",
-            "startAngle": "315", "endAngle": "45", "direction": "CLOCKWISE", "align": "CENTER",
-            "ellipsis": "TRUE",
-        }
-            template = text.find("Font/Template")
-            assert template is not None and "".join(template.itertext()).strip() == expected_template
-            assert [parameter.get("expression") for parameter in template.findall("Parameter")] == expected_parameters
+        assert hour * 30 + minute * 0.5 == expected_angle, clock_time
+    assert transform.find("Animation").attrib == {"duration":"0.4", "repeat":"0", "angleDirection":"CLOCKWISE"}
 
-            part = next(part for part in slots["4"].iter("PartText") if part.find(".//TextCircular") is text)
-            diameter = float(text.attrib["width"])
-            radius = diameter / 2
-            slot_x, slot_y = float(slots["4"].attrib["x"]), float(slots["4"].attrib["y"])
-            center_x = slot_x + float(part.attrib["x"]) + float(text.attrib["centerX"])
-            center_y = slot_y + float(part.attrib["y"]) + float(text.attrib["centerY"])
-            angles = (float(text.attrib["startAngle"]), 0.0, float(text.attrib["endAngle"]))
-            arc_points = [
-                (center_x + radius * math.sin(math.radians(angle)), center_y - radius * math.cos(math.radians(angle)))
-                for angle in angles
-            ]
-            assert (center_x, center_y) == (inner_arc["center_x"], inner_arc["center_y"])
-            # Keep the 26px glyph ink above the side complication circles.
-            assert all(y + 13 < float(slots["0"].attrib["y"]) for _, y in arc_points)
+    slot = slots["3"]
+    shape = slot.find("BoundingArc")
+    assert shape is not None and shape.attrib == {"centerX":"201", "centerY":"-75", "width":"365", "height":"365", "startAngle":"259", "endAngle":"101", "direction":"COUNTER_CLOCKWISE", "thickness":"85"}
+    # Arc A: r205 251.5→108.5°; Arc B: r160 238.5→121.5°.
+    assert 205 - 20 - (160 + 20) == 5
+    # A single BoundingArc cannot encode the gap, but must crop all actual ink.
+    crop_inner, crop_outer = 182.5 - 42.5, 182.5 + 42.5
+    assert crop_inner <= 160 - 20 and crop_outer >= 205 + 20
+    # Full 13px-ink path containment, crop containment, clock/edge safety, and AOD safety.
+    clock = root.find(".//DigitalClock")
+    assert clock is not None
+    clock_bottom = float(clock.get("y")) + max(float(t.get("y")) + float(t.get("height")) for t in clock.findall("TimeText"))
+    for radius, start, end in ((160, 238.5, 121.5), (205, 251.5, 108.5)):
+        for angle in (start, end):
+            assert 140 <= radius - 13 and radius + 13 <= 225
+            assert 101 <= angle <= 259
+        assert 225 + radius - 13 > clock_bottom
+    # Arc A's crop has at least a conservative 13px tangential endpoint margin.
+    angular_margin = math.degrees(math.asin(13 / 205))
+    assert 259 - 251.5 >= angular_margin and 108.5 - 101 >= angular_margin
+    assert 225 + 205 + 13 <= float(root.get("height"))
+    # Wider paths deliberately approach the side visuals. Verify what is actually
+    # rendered instead: every 13px ink bound is in the slot crop and on-screen.
+    for radius, start, end in ((160, 238.5, 121.5), (205, 251.5, 108.5)):
+        for angle in sweep_angles(ET.fromstring(
+            f'<TextCircular width="{radius * 2}" startAngle="{start}" endAngle="{end}" direction="COUNTER_CLOCKWISE"/>'
+        )):
+            x = 225 + radius * math.sin(math.radians(angle))
+            y = 225 - radius * math.cos(math.radians(angle))
+            assert 0 <= x - 13 and x + 13 <= 450 and 0 <= y - 13 and y + 13 <= 450
+    assert slot.find("Variant").attrib == {"mode":"AMBIENT", "target":"alpha", "value":"[CONFIGURATION.aod] == 0 ? 165 : 0"}
+    battery_path = slot.find("Complication[@type='SHORT_TEXT']/Condition/Compare/PartText/TextCircular")
+    assert battery_path is not None
+    assert battery_path.attrib == {"centerX":"212", "centerY":"-52", "width":"410", "height":"410", "startAngle":"251.5", "endAngle":"108.5", "direction":"COUNTER_CLOCKWISE", "align":"CENTER", "ellipsis":"TRUE"}
+    assert parameters(battery_path) == ["[BATTERY_PERCENT]", "subText([COMPLICATION.TEXT],1,4)==100?100:(subText([COMPLICATION.TEXT],1,3))"]
+    short = slot.find("Complication[@type='SHORT_TEXT']/Condition/Default/Condition")
+    assert short is not None and (short.find("Expressions/Expression").text or "") == "textLength([COMPLICATION.TITLE]) > 0"
+    assert_paths(slot, normal_options(short.find("Compare")))
+    assert_paths(slot, normal_options(short.find("Default")), one_line=True)
+    long_condition = slot.find("Complication[@type='LONG_TEXT']/Condition")
+    assert long_condition is not None
+    expressions = ET.tostring(long_condition.find("Expressions"), encoding="unicode")
+    assert '"---"' in expressions and "textLength([COMPLICATION.TITLE]) == 0" in expressions and "!= null" not in expressions
+    nested = long_condition.find("Default/Condition")
+    assert nested is not None
+    assert_paths(slot, normal_options(nested.find("Compare")))
+    over_budget = nested.find("Default/Condition")
+    assert over_budget is not None
+    assert "textLength([COMPLICATION.TEXT]) > 23" in (over_budget.find("Expressions/Expression").text or "")
+    assert_paths(slot, normal_options(over_budget.find("Compare")), split=True)
+    assert_paths(slot, normal_options(over_budget.find("Default")), one_line=True)
 
-    slot_2_images = slots["2"].findall(".//PartImage")
-    assert len(slot_2_images) == 1
-    icon = slot_2_images[0]
-    assert icon.attrib == {"width": "32", "height": "32", "x": "185", "y": "4", "tintColor": "[CONFIGURATION.themeColor.1]"}
-    assert icon.find("Image").attrib == {"resource": "[COMPLICATION.MONOCHROMATIC_IMAGE_AMBIENT]"}
-    assert_box_in_arc(icon, slots["2"], outer_arc)
-    combined_battery = slots["2"].find("Complication[@type='SHORT_TEXT']/Condition/Compare")
-    battery_text = combined_battery.find("PartText/TextCircular")
-    assert battery_text is not None and battery_text.attrib == {
-        "centerX": "225", "centerY": "225", "width": "410", "height": "410",
-        "startAngle": "305", "endAngle": "55", "direction": "CLOCKWISE", "align": "CENTER",
-        "ellipsis": "TRUE",
-    }
-    battery_font = battery_text.find("Font")
-    assert battery_font is not None and battery_font.attrib == {
-        "color": "[CONFIGURATION.themeColor.0]", "family": "SYNC_TO_DEVICE", "size": "32", "letterSpacing": "-0.05",
-    }
-    battery_template = battery_font.find("Template")
-    assert battery_template is not None and "".join(battery_template.itertext()).strip() == "%s · %s"
-    assert [parameter.attrib["expression"] for parameter in battery_template.findall("Parameter")] == [
-        "[BATTERY_PERCENT]", "subText([COMPLICATION.TEXT],1,4)==100?100:(subText([COMPLICATION.TEXT],1,3))",
-    ]
-    assert not battery_text.findall(".//InlineImage")
-    for slot_id in ("2", "4"):
-        for part in slots[slot_id].findall(".//PartText"):
-            assert part.find("TextCircular") is not None, f"slot {slot_id} has non-arc text that BoundingArc could crop"
-        for image in slots[slot_id].findall(".//PartImage"):
-            assert_box_in_arc(image, slots[slot_id], bounding_arc(slots[slot_id]))
+    # The notification icon's full raster must remain inside slot 3's BoundingArc,
+    # not merely within the rectangular slot.
+    notification = long_condition.find("Compare/PartImage")
+    assert notification is not None
+    center_x = float(slot.get("x")) + float(shape.get("centerX"))
+    center_y = float(slot.get("y")) + float(shape.get("centerY"))
+    inner, outer = 182.5 - 42.5, 182.5 + 42.5
+    for x in (float(notification.get("x")), float(notification.get("x")) + float(notification.get("width"))):
+        for y in (float(notification.get("y")), float(notification.get("y")) + float(notification.get("height"))):
+            dx, dy = float(slot.get("x")) + x - center_x, float(slot.get("y")) + y - center_y
+            radius = math.hypot(dx, dy)
+            angle = math.degrees(math.atan2(dx, -dy)) % 360
+            assert inner <= radius <= outer and 101 <= angle <= 259
 
-    # The bands are concentric: inner=140..180, outer=185..225, a 5px gap.
-    # WFF BoundingArc is authoritative for selection/crop.
-    assert inner_arc["radius"] + inner_arc["thickness"] / 2 < outer_arc["radius"] - outer_arc["thickness"] / 2
-    assert outer_arc["radius"] - outer_arc["thickness"] / 2 - (inner_arc["radius"] + inner_arc["thickness"] / 2) >= 5
-    assert sum(font.get("family") == "SYNC_TO_DEVICE" and font.get("letterSpacing") == "-0.05" for slot_id in ("2", "3", "4") for font in slots[slot_id].findall(".//Font")) == 20
-
-    # These snapshots retain the pre-existing slots' geometry, policies,
-    # images, conditions, and other non-font behavior. Only approved font
-    # attributes are normalized for slots 2, 3, and 4 before hashing.
-    for slot_id, expected in SLOT_SNAPSHOTS.items():
-        assert snapshot(slots[slot_id]) == expected, f"slot {slot_id} behavior changed"
-
-    date_lines = slots["0"].find("Complication[@type='SHORT_TEXT']").findall("PartText")
-    assert [(line.get("name"), line.get("x"), line.get("y"), line.get("width"), line.get("height")) for line in date_lines] == [("date", "0", "24", "130", "38"), ("weekday", "0", "67", "130", "34")]
-    assert [line.find("Localization").attrib for line in date_lines] == [{"locales": "en_US"}, {"locales": "en_US"}]
-    assert date_lines[0].find(".//Parameter").get("expression") == 'icuText("MM/dd", [UTC_TIMESTAMP])'
-    assert date_lines[1].find(".//Upper/Template/Parameter").get("expression") == 'icuText("EEE", [UTC_TIMESTAMP])'
-    clock = current.find(".//DigitalClock")
-    assert hashlib.sha256(serialized(clock)).hexdigest() == CLOCK_SNAPSHOT
-    print("fixed font mapping and non-font WFF snapshots verified")
+    # Slot 4 is independently named and checked rather than treated as a snapshot.
+    slot4 = slots["4"]
+    assert slot4.find("DefaultProviderPolicy") is None
+    assert {group.get("name") for group in slot4.findall(".//Group")} == {"second_top_short_text", "second_top_long_text"}
+    slot4_shape = slot4.find("BoundingArc")
+    assert slot4_shape is not None
+    slot4_radius, slot4_half_thickness = float(slot4_shape.get("width")) / 2, float(slot4_shape.get("thickness")) / 2
+    for text in slot4.findall(".//TextCircular"):
+        part = part_for(slot4, text)
+        assert global_center(slot4, part, text) == (225.0, 225.0)
+        assert text.get("direction") == "CLOCKWISE"
+        text_radius = float(text.get("width")) / 2
+        assert slot4_radius - slot4_half_thickness <= text_radius - 13
+        assert text_radius + 13 <= slot4_radius + slot4_half_thickness
+        path_bounds(part, text)
+    print("Nova Mono, safe adaptive arc, minute-proportional hour animation, and safety invariants verified")
     return 0
 
 
