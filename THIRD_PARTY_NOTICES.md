@@ -11,8 +11,22 @@
 * Copyright: Copyright 2018 The Orbitron Project Authors.
 * License: SIL Open Font License 1.1, reproduced verbatim in [`OFL.txt`](OFL.txt).
 
-The face uses Orbitron’s variable-font MEDIUM (weight 500) for the center
-clock and left/right complication text. The outlined-AOD schema option is
-retained for configuration compatibility, but now renders the same solid
-Orbitron clock treatment as the solid option. No uncleared font is bundled or
-referenced. This notice applies only to the bundled Orbitron font.
+The face uses Orbitron for left/right complication text.
+
+## Nova Mono
+
+`watchface/src/main/res/font/nova_mono.ttf` is the official, unmodified static
+Regular artifact retrieved from Google Fonts on 2026-08-30.
+
+* Exact source URL: `https://raw.githubusercontent.com/google/fonts/main/ofl/novamono/NovaMono.ttf`.
+* Provenance: [google/fonts `ofl/novamono`](https://github.com/google/fonts/tree/main/ofl/novamono), branch `main`.
+* SHA-256: `648eadb6648c0801b186d3dcef60ee6aa84a791b1e09c726935c0712508b4807`.
+* Status: static Regular, unmodified (no `fvar` table); `OS/2.usWeightClass` is 400.
+* Copyright: Copyright (c) 2011, wmk69 (wmk69@o2.pl).
+* License: SIL Open Font License 1.1, retrieved verbatim from `https://raw.githubusercontent.com/google/fonts/main/ofl/novamono/OFL.txt` as [`NOVA_MONO_OFL.txt`](NOVA_MONO_OFL.txt) (SHA-256 `197c3f48cff4df3d768230e0bbdbc4305d8b8b9041ea6fb5e00872af66adc5ae`).
+* Reserved Font Name: `NovaMono` (preserved; this bundled artifact is unmodified).
+
+Nova Mono is used only for the 112px center clock; Orbitron remains bundled and
+in use for the left/right complications.
+The outlined-AOD schema option is retained for configuration compatibility, but
+now renders the same solid clock treatment as the solid option.
