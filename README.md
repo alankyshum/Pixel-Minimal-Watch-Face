@@ -4,14 +4,15 @@ This is a configurable derivative of an upstream WFF2 watch face for Wear OS 5+.
 
 ## Current layout and assignments
 
-- **Center:** large digital clock.
-- **Top outer arc (slot 2):** the third-party [Phone Battery Complication](https://play.google.com/store/apps/details?id=com.weartools.phonebattcomp) Event Timer complication. Its normal text behavior is retained; its combined-battery presentation follows the same outer arc so it remains inside that slot's selectable/cropped arc shape, preserving watch and companion/phone percentages as plain circular text separated by a centered dot, without inline watch/phone icons because inline images are not used on the circular path. Special top notification rows use a compact monochromatic icon at the arc apex.
+- **Center:** large Nova Mono digital clock.
+- **Top outer arc (slot 2):** the third-party [Phone Battery Complication](https://play.google.com/store/apps/details?id=com.weartools.phonebattcomp) default provider. Its normal text behavior is retained; its combined-battery presentation follows the same outer arc so it remains inside that slot's selectable/cropped arc shape, preserving watch and companion/phone percentages as plain circular text separated by a centered dot, without inline watch/phone icons because inline images are not used on the circular path. Special top notification rows use a compact monochromatic icon at the arc apex.
 - **Top inner arc (slot 4):** an independent, initially unassigned text-only `SHORT_TEXT` or `LONG_TEXT` complication. `SHORT_TEXT` displays provider text only; `LONG_TEXT` displays provider text followed by its title (for example, `Now > 11:15`). Its narrower circular-text arc is below slot 2 and above the clock, leaving the left and right circular complication areas clear.
-- **Bottom (slot 3):** a Calendar Pro `LONG_TEXT` next-event complication. In the observed setup it supplies next-event text with time/remaining information; the face displays the provider's text and title and does not guarantee separate start and end times.
+- **Bottom (slot 3):** adaptive lower circular text, defaulting to Day & Date. Arc A (outer/farther) is radius 205/diameter 410, `251.5→108.5°`, and Arc B (inner/closer) is radius 160/diameter 320, `238.5→121.5°`, both counter-clockwise about global 225,225: exact 30% geometric expansions of the former 110°/90° paths. Their 40px ink-safe bands leave a 5px radial gap. One-line content uses Arc A for 23 characters; with a nonempty title, `TEXT` (read first) uses Arc B for 20 and `TITLE` uses Arc A for 23. A title-less `LONG_TEXT` stays on Arc A through 23; above that it takes a fixed—not word-boundary—18-character Arc-B segment plus a literal hyphen, then Arc A receives characters 18 through 40 via end-exclusive `subText([COMPLICATION.TEXT],18,41)`; WFF has no whitespace search. The sole `r=182.5`, 85px-thick `BoundingArc` crop is `259→101°`, covering radial 140..225 with a conservative 13px angular ink margin. This deliberate wider layout comes closer to the left/right side visuals; it no longer promises side-box endpoint clearance. The verifier instead checks rendered-path/raster containment, crop containment, on-screen bounds, clock clearance, and AOD visibility. Unusually wide glyph sequences remain authoritatively cropped. Exact `---` notification sentinel remains icon-only only when its title length is zero; `---` with a nonempty title follows the normal two-line branch. Combined battery (invisible U+FEFF sentinel) uses Arc A.
 - **Left (slot 0):** system **Day & Date** `SHORT_TEXT`, customized to omit the provider icon and show centered `MM/DD` and uppercase English weekday lines.
 - **Right (slot 1):** timer/countdown complication.
+- **Hour Animation:** the compatibility-preserved `secIndicator` setting is labelled **Hour Animation**. When enabled, its visual arc is hidden in ambient and uses exactly `[HOUR_0_11] * 30 + [MINUTE] * 0.5`, updating at minute-level granularity so it moves proportionally through each hour: 09:00=270°, 09:30=285°, 09:59=299.5°, 11:59=359.5°, and 12:00=0°. It uses a one-shot 0.4-second clockwise transition (`repeat="0"`) and does not use seconds.
 
-Slots remain configurable in the Wear OS complication editor. Phone Battery Complication and Calendar Pro are third-party apps and are **not bundled** here. The optional `phone-companion`, `watch-provider`, and `shared-protocol` modules are local bridge modules; they are separate from both third-party providers and are not required for the assignments above. See [LOCAL_ARCHITECTURE.md](LOCAL_ARCHITECTURE.md) for their local-only design.
+Slots remain configurable in the Wear OS complication editor. Phone Battery Complication is a third-party app and is **not bundled** here. The optional `phone-companion`, `watch-provider`, and `shared-protocol` modules are local bridge modules; they are separate from the third-party provider and are not required for the assignments above. See [LOCAL_ARCHITECTURE.md](LOCAL_ARCHITECTURE.md) for their local-only design.
 
 ## Build and personal use
 
@@ -22,18 +23,18 @@ Slots remain configurable in the Wear OS complication editor. Phone Battery Comp
 
 This checkout has no release signing setup. Compiled APKs are not distributed by this repository.
 
-## Font mapping (local v1.0.14 crash fix)
+## Font mapping and circular-text safety
 
-- Center clock, left date display, and right Timer use the bundled Orbitron font; the left display is provider-independent `MM/DD` plus uppercase English weekday, the clock remains 112px, and the circular-complication text is scaled for fit.
-- Top and bottom text complications (slots 2, 4, and 3) use the Wear OS system font with device-proven `letterSpacing="-0.05"` (−0.05em), including their combined-battery layouts where applicable, while retaining the existing 18/22/26px font-size options and long-text behavior. Slot 4 is text-only and shares slot 2's top font-size configuration. Center, left, and right remain on Orbitron.
+- The 112px center clock uses the unmodified static Nova Mono Regular Google Fonts artifact (OS/2 weight class 400); provenance, source URL, and SHA-256 are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Its fixed-pitch metrics keep clock glyphs neat without tracking, because WFF v2 `TimeText` fonts do not permit `letterSpacing`. Left date display and right Timer retain bundled Orbitron with `letterSpacing="-0.05"` (−0.05em).
+- Top and bottom text complications (slots 2, 4, and 3) use `SYNC_TO_DEVICE` with `letterSpacing="-0.05"`. Slot 3 retains 18/22/26px options, exactly one `TextCircular` per sibling `PartText`, tight ±13px-ink rasters, and explicit bounded expressions. Its conservative single `BoundingArc` remains the authoritative crop; path-level verification additionally enforces separate radial bands, crop containment, clock/edge clearance, and AOD safety.
 
-### v1.0.14 release note
+### v1.0.16 release note
 
-Replace v1.0.13: its literal `-0.5em` tracking could produce zero or negative text-bitmap widths in the device renderer and cause runtime crashes. v1.0.14 restores the device-proven safe `-0.05em` correction. The center Orbitron MEDIUM 112px clock, zero-padded `MM/DD` plus uppercase English weekday Orbitron 24/21px left date, right Timer Orbitron 24/26/22/27/22/26/26px sequence, and top/bottom system-font sizes are otherwise retained.
+Ships exact 30%-wider adaptive bottom arcs, plus the restored minute-interpolated **Hour Animation** while retaining the `secIndicator` compatibility ID. It also includes the Nova Mono clock, safe side/`PartText` tracking, WFF validation hardening, and lower-power local bridge updates. This source-only release is neither release-signed nor accompanied by an uploaded APK.
 
 ### v1.0.15 release note
 
-Adds an independent second top circular text complication (slot 4). Its `LONG_TEXT` rendering includes both provider text and title, fixing Calendar Pro's observed `Now > 11:15` presentation while keeping the existing top slot's battery and notification behavior inside its circular arc.
+Adds an independent second top circular text complication (slot 4). Its `LONG_TEXT` rendering includes both provider text and title (for example, `Now > 11:15`) while keeping the existing top slot's battery and notification behavior inside its circular arc.
 
 ## Configuration inventory
 
@@ -51,7 +52,7 @@ This section is generated from `watchface.xml` and `strings.xml`. Do not edit it
 | `hollowAOD` | AOD Clock | list | `0` | `0` Solid; `1` Solid (formerly Outlined) |
 | `topComplicationFontSize` | Top complication font size | list | `22` | `18` Small; `22` Medium; `26` Large |
 | `bottomComplicationFontSize` | Bottom complication font size | list | `22` | `18` Small; `22` Medium; `26` Large |
-| `secIndicator` | Seconds Indicator | boolean | `FALSE` | `FALSE` Off; `TRUE` On |
+| `secIndicator` | Hour Animation | boolean | `FALSE` | `FALSE` Off; `TRUE` On |
 
 ### Complication slots
 
@@ -60,7 +61,7 @@ This section is generated from `watchface.xml` and `strings.xml`. Do not edit it
 | `0` | Left Circle Slot | 130 × 130 at 5,160 | `RANGED_VALUE SHORT_TEXT MONOCHROMATIC_IMAGE SMALL_IMAGE EMPTY` | `defaultSystemProvider`=DAY_AND_DATE, `defaultSystemProviderType`=SHORT_TEXT |
 | `1` | Right Circle Slot | 130 × 130 at 315,160 | `RANGED_VALUE SHORT_TEXT MONOCHROMATIC_IMAGE SMALL_IMAGE EMPTY` | `defaultSystemProvider`=TIMER, `defaultSystemProviderType`=SHORT_TEXT |
 | `2` | Top Box Slot | 402 × 112 at 24,0 | `SHORT_TEXT LONG_TEXT EMPTY` | `defaultSystemProvider`=DAY_AND_DATE, `defaultSystemProviderType`=SHORT_TEXT, `primaryProvider`=com.weartools.phonebattcomp/com.weartools.phonebattcomp.complication.MobileBatteryComplicationService, `primaryProviderType`=SHORT_TEXT |
-| `3` | Bottom Box Slot | 256 × 46 at 97,355 | `SHORT_TEXT LONG_TEXT EMPTY` | `defaultSystemProvider`=DAY_AND_DATE, `defaultSystemProviderType`=SHORT_TEXT |
+| `3` | Bottom Box Slot | 402 × 150 at 24,300 | `SHORT_TEXT LONG_TEXT EMPTY` | `defaultSystemProvider`=DAY_AND_DATE, `defaultSystemProviderType`=SHORT_TEXT |
 | `4` | Second Top Text Slot | 256 × 80 at 97,57 | `SHORT_TEXT LONG_TEXT EMPTY` | — |
 
 ### Flavors
@@ -89,12 +90,18 @@ python3 tools/generate_readme_config.py --check
 
 # Verify the fixed font mapping and non-font WFF invariants
 python3 tools/verify_font_mapping.py
+
+# Download a checksum-pinned Google watchface source tree, build its official
+# validator, and validate this resource against WFF schema version 2.
+tools/validate_wff_v2.sh
 ```
 
-The tracked pre-commit hook runs the `--check` command. It is intentionally activated only after the explicit local `core.hooksPath` command above.
+The tracked pre-commit hook runs the README `--check` command, static font/geometry verifier, and the portable official WFF v2 validation command. The latter caches a checksum-pinned source archive under `${XDG_CACHE_HOME:-$HOME/.cache}`; before executing it validates the archive, pinned validator build source, and validator JAR digests, so a verified cache does not force network access. It needs `curl`, `tar`, a POSIX shell, and Java 17 only when rebuilding/downloading. It is intentionally activated only after the explicit local `core.hooksPath` command above.
+
+The validator source is Google’s Apache-2.0 [watchface repository](https://github.com/google/watchface), commit `44b1855d445686ac8de5dbc95003d6f8e6623643`; the downloaded codeload archive must match SHA-256 `d32b020cd7130b0d5d0a576878b452785b46c1c614642f4af55a937ef551ed4d`. It builds the repository’s documented `:specification:validator:executable-jar` target and invokes `java -jar wff-validator.jar 2 watchface/src/main/res/raw/watchface.xml`. This is a portable replacement for the reviewer-session schema-tree path; `xmllint` cannot compile the official schema because its XSD 1.0 implementation rejects the schema’s repeated members in `xs:all`.
 
 ## Permission, licensing, and publication status
 
 This repository is **source-available, not OSI open source**. The supplied written upstream permission is quoted verbatim in [UPSTREAM_PERMISSION.md](UPSTREAM_PERMISSION.md). It is interpreted narrowly as permission for public source hosting and GitHub forking for personal use. It does not grant or claim commercial rights, sublicensing, general redistribution, or APK/release distribution. Downstream users should seek clarification from the upstream rights holder for rights beyond that quoted permission. This is practical compliance information, not legal advice.
 
-The sole bundled font is the unmodified `orbitron_wght.ttf`, licensed under the SIL Open Font License 1.1; see [OFL.txt](OFL.txt) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). No blanket license applies to the remaining upstream-derived material.
+The bundled Orbitron and Nova Mono fonts are unmodified and licensed under the SIL Open Font License 1.1; see [OFL.txt](OFL.txt), [NOVA_MONO_OFL.txt](NOVA_MONO_OFL.txt), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). No blanket license applies to the remaining upstream-derived material.
