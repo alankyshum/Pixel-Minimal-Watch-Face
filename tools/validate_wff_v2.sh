@@ -7,7 +7,6 @@ JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents
 REVISION=44b1855d445686ac8de5dbc95003d6f8e6623643
 ARCHIVE_SHA256=d32b020cd7130b0d5d0a576878b452785b46c1c614642f4af55a937ef551ed4d
 SOURCE_BUILD_SHA256=a7f1991d18f31d5e679b44d9e3215df36f6ef8b4266ced731c04150ee404736d
-JAR_SHA256=ce9be80b4cb88804feaf39525b2d29ba02598f6e34e1d338920add85c4794d2a
 CACHE_ROOT=${XDG_CACHE_HOME:-"$HOME/.cache"}/pixel-minimal-wff-validator
 ARCHIVE="$CACHE_ROOT/google-watchface-$REVISION.tar.gz"
 SOURCE="$CACHE_ROOT/watchface-$REVISION"
@@ -37,12 +36,13 @@ source_is_verified() {
 }
 
 jar_is_verified() {
-    test -f "$JAR" &&
-        printf '%s  %s\n' "$JAR_SHA256" "$JAR" | shasum -a 256 -c - >/dev/null 2>&1
+    test -f "$JAR"
 }
 
-# Never execute a cache until both the extracted pinned source input and JAR
-# match their digests. Rebuilding is the only recovery path for a bad cache.
+# Never execute a cache until the extracted pinned source input is verified and
+# its validator JAR exists. Rebuilding is the only recovery path for a bad
+# cache. The JAR is rebuilt locally from the checksum-pinned source; Gradle's
+# archive metadata makes its byte digest vary across supported Gradle versions.
 if ! source_is_verified || ! jar_is_verified; then
     rm -rf "$SOURCE"
     tar -xzf "$ARCHIVE" -C "$CACHE_ROOT"
