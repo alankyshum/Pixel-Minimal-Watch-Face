@@ -9,4 +9,13 @@ object CalendarFormatting {
             ?: events.asSequence().filterNot { it.cancelled || it.declined }.filter { it.allDay }.minByOrNull { it.begin }
     fun render(event: CalendarEvent, time: (Long) -> String): String =
         if (event.allDay) "All day ${event.title.take(55)}" else "${time(event.begin)}-${time(event.end)} ${event.title.take(45)}"
+
+    /** Delay until the next timed event transition in this same provider snapshot. */
+    fun nextBoundaryDelay(events: List<CalendarEvent>, now: Long): Long? =
+        events.asSequence()
+            .filter { !it.allDay && !it.cancelled && !it.declined && it.end > now }
+            .map { minOf(it.begin, it.end) }
+            .filter { it > now }
+            .minOrNull()
+            ?.minus(now)
 }
