@@ -7,7 +7,7 @@
     <string name="id_aod_1">Time Only</string>
     <string name="id_aod_2">Time Only ++</string>
 
-    <string name="id_sec_indicator">Seconds Indicator</string>
+    <string name="id_sec_indicator">Hour Animation</string>
 
     <string name="id_hollow_aod">AOD Clock</string>
     <string name="id_hollow_aod_0">Solid</string>
