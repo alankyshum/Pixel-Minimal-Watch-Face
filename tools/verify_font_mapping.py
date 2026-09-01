@@ -71,7 +71,35 @@ def normal_options(branch: ET.Element) -> list[ET.Element]:
     return options
 
 
-def assert_paths(slot: ET.Element, options: list[ET.Element], *, one_line: bool = False, split: bool = False) -> None:
+def space_search_expression(*, line: str) -> str:
+    """The WFF-v2-only descending ASCII-space search used by LONG_TEXT paths."""
+    text = "[COMPLICATION.TEXT]"
+    terms: list[str] = []
+    for index in range(27, 0, -1):
+        if line == "inner":
+            result = f"subText({text},0,{index})"
+        else:
+            # Start after the consumed separator and retain at most 34 characters.
+            result = f"subText({text},{index + 1},{index + 35})"
+        terms.append(f'subText({text},{index},{index + 1}) == " " ? {result}')
+    # The terminal branch is the shared index-1 decision. `hasSplitSpace`
+    # already established that one of 27..1 is ASCII space, so after tests
+    # 27..2 fail, index 1 is necessarily the selected separator.
+    terms.pop()
+    return " : ".join(terms) + (f" : subText({text},0,1)" if line == "inner" else f" : subText({text},2,36)")
+
+
+def renders_long_text(text: str) -> tuple[str, str | None]:
+    """Model the XML split policy, including its intentional one-line fallback."""
+    if len(text) <= 34:
+        return text[:34], None
+    split_at = next((index for index in range(27, 0, -1) if text[index:index + 1] == " "), None)
+    if split_at is None:
+        return text[:34], None
+    return text[:split_at], text[split_at + 1:split_at + 35]
+
+
+def assert_paths(slot: ET.Element, options: list[ET.Element], *, one_line: bool = False, split: bool = False, one_line_budget: int = 23) -> None:
     for option in options:
         paths = option.findall(".//TextCircular")
         assert len(paths) == (1 if one_line else 2)
@@ -85,13 +113,13 @@ def assert_paths(slot: ET.Element, options: list[ET.Element], *, one_line: bool 
             path_bounds(part, text)
         if one_line:
             assert (paths[0].get("width"), paths[0].get("startAngle"), paths[0].get("endAngle")) == ("410", "251.5", "108.5")
-            assert parameters(paths[0]) == ["subText([COMPLICATION.TEXT],0,23)"]
+            assert parameters(paths[0]) == [f"subText([COMPLICATION.TEXT],0,{one_line_budget})"]
         else:
             assert [(p.get("width"), p.get("startAngle"), p.get("endAngle")) for p in paths] == [("320", "238.5", "121.5"), ("410", "251.5", "108.5")]
-            expected = (["subText([COMPLICATION.TEXT],0,18)"], ["subText([COMPLICATION.TEXT],18,41)"]) if split else (["subText([COMPLICATION.TEXT],0,20)"], ["subText([COMPLICATION.TITLE],0,23)"])
+            expected = ([space_search_expression(line="inner")], [space_search_expression(line="outer")]) if split else (["subText([COMPLICATION.TEXT],0,20)"], ["subText([COMPLICATION.TITLE],0,23)"])
             assert [parameters(p) for p in paths] == list(expected)
             if split:
-                assert paths[0].find("Font/Template").text == "%s-"
+                assert paths[0].find("Font/Template").text == "%s"
 
 
 def main() -> int:
@@ -170,16 +198,41 @@ def main() -> int:
     assert_paths(slot, normal_options(short.find("Default")), one_line=True)
     long_condition = slot.find("Complication[@type='LONG_TEXT']/Condition")
     assert long_condition is not None
-    expressions = ET.tostring(long_condition.find("Expressions"), encoding="unicode")
-    assert '"---"' in expressions and "textLength([COMPLICATION.TITLE]) == 0" in expressions and "!= null" not in expressions
-    nested = long_condition.find("Default/Condition")
-    assert nested is not None
-    assert_paths(slot, normal_options(nested.find("Compare")))
-    over_budget = nested.find("Default/Condition")
+    sentinel = long_condition.find("Expressions/Expression")
+    assert sentinel is not None and (sentinel.text or "") == '[COMPLICATION.TEXT] == "---"'
+    # LONG_TEXT previews deliberately ignore provider titles (for example, app names).
+    assert "COMPLICATION.TITLE" not in ET.tostring(long_condition, encoding="unicode")
+    over_budget = long_condition.find("Default/Condition")
     assert over_budget is not None
-    assert "textLength([COMPLICATION.TEXT]) > 23" in (over_budget.find("Expressions/Expression").text or "")
+    condition = over_budget.find("Expressions/Expression")
+    assert condition is not None
+    expected_conditions = " || ".join(
+        f'subText([COMPLICATION.TEXT],{index},{index + 1}) == " "' for index in range(27, 0, -1)
+    )
+    assert (condition.text or "") == f"textLength([COMPLICATION.TEXT]) > 34 && ({expected_conditions})"
     assert_paths(slot, normal_options(over_budget.find("Compare")), split=True)
-    assert_paths(slot, normal_options(over_budget.find("Default")), one_line=True)
+    assert_paths(slot, normal_options(over_budget.find("Default")), one_line=True, one_line_budget=34)
+    # The rightmost qualifying ASCII space is the only character consumed.
+    # Adjacent repeated spaces therefore remain in their respective slices.
+    # Unbroken and CJK text has no qualifying separator, so over-budget input
+    # takes the one-line 34-character truncated fallback.
+    for source, expected in (
+        ("Meet the team in the cafeteria for lunch tomorrow", ("Meet the team in the", "cafeteria for lunch tomorrow")),
+        ("one two three four five xx  seven eight nine", ("one two three four five xx ", "seven eight nine")),
+        ("one two three four five six  seven eight nine", ("one two three four five six", " seven eight nine")),
+        ("supercalifragilisticexpialidociouswordthatcannotbreak", ("supercalifragilisticexpialidocious", None)),
+        ("這是一段沒有空格而且足夠長的中文通知文字不能跨行切開請保持單行截斷測試資料", ("這是一段沒有空格而且足夠長的中文通知文字不能跨行切開請保持單行截斷測", None)),
+    ):
+        rendered = renders_long_text(source)
+        assert rendered == expected, (source, rendered)
+        if rendered[1] is not None:
+            # These fixtures fit their second-line budget: rejoining proves
+            # exactly one ASCII separator, not a whitespace run, was consumed.
+            assert source == rendered[0] + " " + rendered[1]
+            assert len(rendered[0]) <= 27 and len(rendered[1]) <= 34
+    cjk_source = "這是一段沒有空格而且足夠長的中文通知文字不能跨行切開請保持單行截斷測試資料"
+    cjk_rendered = renders_long_text(cjk_source)
+    assert len(cjk_source) > 34 and cjk_rendered == (cjk_source[:34], None)
 
     # The notification icon's full raster must remain inside slot 3's BoundingArc,
     # not merely within the rectangular slot.

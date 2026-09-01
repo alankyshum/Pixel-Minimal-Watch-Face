@@ -11,17 +11,25 @@ TRUE/FALSE option IDs for compatibility, but presents it as **Hour Animation**:
 its ambient-hidden visual arc uses `[HOUR_0_11] * 30 + [MINUTE] * 0.5` and a
 non-repeating 0.4s clockwise transition. It moves proportionally through every
 hour with minute-level updates (09:00=270°, 09:30=285°, 09:59=299.5°,
-11:59=359.5°, 12:00=0°) without using seconds. Slot 3's adaptive lower arcs use
-title presence to select outer-only versus TEXT-inner/TITLE-outer rendering.
-Arc A is geometrically expanded 30% to r205 `251.5→108.5`; Arc B is expanded
-30% to r160 `238.5→121.5`; and the r182.5 crop is `259→101`, radial 140..225.
-The 23-character outer and 20-character inner budgets are retained. This
+11:59=359.5°, 12:00=0°) without using seconds. Slot 3's `SHORT_TEXT` retains
+title-aware outer-only versus TEXT-inner/TITLE-outer rendering. Its `LONG_TEXT`
+notification previews ignore `TITLE`: TEXT of 34 characters or fewer uses one
+outer line, regardless of a populated title. Arc A is geometrically expanded
+30% to r205 `251.5→108.5`; Arc B is expanded 30% to r160 `238.5→121.5`; and
+the r182.5 crop is `259→101`, radial 140..225.
+The `LONG_TEXT` budgets are 34 characters on the outer line and 27 on the
+inner line (61 nominally combined). This
 deliberately brings rendered endpoints closer to the side visuals, so validation
 uses rendered-content/raster, crop, screen, clock, and AOD checks rather than an
 obsolete side-box endpoint-clearance claim. The `BoundingArc` remains
-authoritative cropping for unusually wide glyph sequences; title-less LONG_TEXT
-uses documented fixed-position 18-plus-hyphen / `subText(...,18,41)` splitting
-because WFF v2 has no word-boundary API.
+authoritative cropping for unusually wide glyph sequences. WFF v2 has no native
+search, so LONG_TEXT uses an identical finite descending `subText` comparison
+chain on both lines to select the last ASCII space at or before index 27. It
+consumes exactly that selected separator; adjacent repeated ASCII spaces are
+preserved, so one can remain trailing on the first line or leading on the
+second. If no candidate exists, it uses the one-line 34-character truncation
+instead of splitting an unbroken word (including CJK text). Its `---`
+notification sentinel remains icon-only regardless of a populated title.
 
 `watch-provider` is the companion Wear APK. Its Data Layer listener validates
 each snapshot, writes the sole SharedPreferences cache used by the provider
