@@ -158,6 +158,7 @@
             <ListOption id="0" displayName="id_aod_0"/>
             <ListOption id="1" displayName="id_aod_1"/>
             <ListOption id="2" displayName="id_aod_2"/>
+            <ListOption id="3" displayName="id_aod_3"/>
         </ListConfiguration>
         <ListConfiguration defaultValue="0" displayName="id_hollow_aod" id="hollowAOD">
             <ListOption id="0" displayName="id_hollow_aod_0" icon="prev_hollow_0" />
@@ -800,13 +801,13 @@
             <TimeText format="hh" hourFormat="SYNC_TO_DEVICE"
                 align="CENTER" x="0" y="75"
                 width="250" height="180">
-                <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.hollowAOD] == 0 ? 255 : 0" />
+                <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 0 : ([CONFIGURATION.hollowAOD] == 0 ? 255 : 0)" />
                 <Font color="#fafafa" size="112" family="nova_mono" weight="NORMAL"/>
             </TimeText>
             <TimeText format="mm" hourFormat="SYNC_TO_DEVICE"
                 align="CENTER" x="0" y="191"
                 width="250" height="180">
-                <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.hollowAOD] == 0 ? 255 : 0" />
+                <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 0 : ([CONFIGURATION.hollowAOD] == 0 ? 255 : 0)" />
                 <Font color="#fafafa" size="112" family="nova_mono" weight="NORMAL"/>
             </TimeText>
             <!-- Hollow -->
@@ -814,16 +815,55 @@
                 align="CENTER" x="0" y="75"
                 width="250" height="180"
                 alpha="0">
-                <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.hollowAOD] == 1 ? 255 : 0" />
+                <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 0 : ([CONFIGURATION.hollowAOD] == 1 ? 255 : 0)" />
                 <Font color="#fafafa" size="112" family="nova_mono" weight="NORMAL"/>
             </TimeText>
             <TimeText format="mm" hourFormat="SYNC_TO_DEVICE"
                 align="CENTER" x="0" y="191"
                 width="250" height="180"
                 alpha="0">
-                <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.hollowAOD] == 1 ? 255 : 0" />
+                <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 0 : ([CONFIGURATION.hollowAOD] == 1 ? 255 : 0)" />
                 <Font color="#fafafa" size="112" family="nova_mono" weight="NORMAL"/>
             </TimeText>
         </DigitalClock>
+
+        <!-- Opt-in AOD-only session countdown. Conditions select time-varying content. -->
+        <Condition>
+            <!-- Keep the SLEEP arc dark for burn-in safety; the selected non-SLEEP endpoint expression deliberately has no overnight branch. -->
+            <Expressions><Expression name="sessionArcEnabled"><![CDATA[[HOUR_0_23] >= 6 && !([HOUR_0_23] >= 22)]]></Expression></Expressions>
+            <Compare expression="sessionArcEnabled">
+                <PartDraw name="session_countdown_arc" width="450" height="450" x="0" y="0" alpha="0">
+                    <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 165 : 0" />
+                    <Arc centerX="225" centerY="225" width="430" height="430" startAngle="0" endAngle="0" direction="CLOCKWISE">
+                        <Transform target="startAngle" value="[HOUR_0_11] * 30 + [MINUTE] * 0.5"/>
+                        <!-- 360, not 0, preserves the clockwise 11:00–12:00 sweep. -->
+                        <Transform target="endAngle" value="[HOUR_0_23] >= 6 &amp;&amp; !([HOUR_0_23] >= 11) ? 330 : ([HOUR_0_23] >= 11 &amp;&amp; !([HOUR_0_23] >= 12) ? 360 : ([HOUR_0_23] >= 12 &amp;&amp; !([HOUR_0_23] >= 17) ? 150 : 300))"/>
+                        <Stroke color="#fafafa" cap="BUTT" thickness="3"/>
+                    </Arc>
+                </PartDraw>
+            </Compare>
+        </Condition>
+        <PartText name="session_countdown_hours" width="250" height="90" x="100" y="120" alpha="0">
+            <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 165 : 0" />
+            <Text align="CENTER"><Font color="#fafafa" family="nova_mono" size="70" weight="NORMAL" letterSpacing="-0.05"><Template>%sh<Parameter expression="numberFormat(&quot;00&quot;, floor((([HOUR_0_23] >= 6 &amp;&amp; !([HOUR_0_23] >= 11) ? 660 : ([HOUR_0_23] >= 11 &amp;&amp; !([HOUR_0_23] >= 12) ? 720 : ([HOUR_0_23] >= 12 &amp;&amp; !([HOUR_0_23] >= 17) ? 1020 : ([HOUR_0_23] >= 17 &amp;&amp; !([HOUR_0_23] >= 22) ? 1320 : ([HOUR_0_23] >= 22 ? 1800 : 360))))) - ([HOUR_0_23] * 60 + [MINUTE])) / 60))"/></Template></Font></Text>
+        </PartText>
+        <PartText name="session_countdown_minutes" width="250" height="90" x="100" y="195" alpha="0">
+            <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 165 : 0" />
+            <Text align="CENTER"><Font color="#fafafa" family="nova_mono" size="70" weight="NORMAL" letterSpacing="-0.05"><Template>%sm<Parameter expression="numberFormat(&quot;00&quot;, floor((([HOUR_0_23] >= 6 &amp;&amp; !([HOUR_0_23] >= 11) ? 660 : ([HOUR_0_23] >= 11 &amp;&amp; !([HOUR_0_23] >= 12) ? 720 : ([HOUR_0_23] >= 12 &amp;&amp; !([HOUR_0_23] >= 17) ? 1020 : ([HOUR_0_23] >= 17 &amp;&amp; !([HOUR_0_23] >= 22) ? 1320 : ([HOUR_0_23] >= 22 ? 1800 : 360))))) - ([HOUR_0_23] * 60 + [MINUTE])) % 60))"/></Template></Font></Text>
+        </PartText>
+        <!-- Condition owns time-varying label selection; Variant only gates AOD mode. -->
+        <Condition>
+            <Expressions>
+                <Expression name="isPeak"><![CDATA[[HOUR_0_23] >= 6 && !([HOUR_0_23] >= 11)]]></Expression>
+                <Expression name="isTransition"><![CDATA[[HOUR_0_23] >= 11 && !([HOUR_0_23] >= 12)]]></Expression>
+                <Expression name="isTrough"><![CDATA[[HOUR_0_23] >= 12 && !([HOUR_0_23] >= 17)]]></Expression>
+                <Expression name="isPersonal"><![CDATA[[HOUR_0_23] >= 17 && !([HOUR_0_23] >= 22)]]></Expression>
+            </Expressions>
+            <Compare expression="isPeak"><PartText name="session_countdown_peak" width="250" height="42" x="100" y="285" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 165 : 0"/><Text align="CENTER"><Font color="#fafafa" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05"><Template>%s<Parameter expression="icuText(&quot;'PEAK'&quot;, [UTC_TIMESTAMP])"/></Template></Font></Text></PartText></Compare>
+            <Compare expression="isTransition"><PartText name="session_countdown_transition" width="250" height="42" x="100" y="285" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 165 : 0"/><Text align="CENTER"><Font color="#fafafa" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05"><Template>%s<Parameter expression="icuText(&quot;'TRANSITION'&quot;, [UTC_TIMESTAMP])"/></Template></Font></Text></PartText></Compare>
+            <Compare expression="isTrough"><PartText name="session_countdown_trough" width="250" height="42" x="100" y="285" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 165 : 0"/><Text align="CENTER"><Font color="#fafafa" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05"><Template>%s<Parameter expression="icuText(&quot;'TROUGH'&quot;, [UTC_TIMESTAMP])"/></Template></Font></Text></PartText></Compare>
+            <Compare expression="isPersonal"><PartText name="session_countdown_personal" width="250" height="42" x="100" y="285" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 165 : 0"/><Text align="CENTER"><Font color="#fafafa" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05"><Template>%s<Parameter expression="icuText(&quot;'PERSONAL'&quot;, [UTC_TIMESTAMP])"/></Template></Font></Text></PartText></Compare>
+            <Default><PartText name="session_countdown_sleep" width="250" height="42" x="100" y="285" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 165 : 0"/><Text align="CENTER"><Font color="#fafafa" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05"><Template>%s<Parameter expression="icuText(&quot;'SLEEP'&quot;, [UTC_TIMESTAMP])"/></Template></Font></Text></PartText></Default>
+        </Condition>
     </Scene>
 </WatchFace>

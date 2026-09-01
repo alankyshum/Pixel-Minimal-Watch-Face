@@ -6,6 +6,7 @@
     <string name="id_aod_0">Dimmed</string>
     <string name="id_aod_1">Time Only</string>
     <string name="id_aod_2">Time Only ++</string>
+    <string name="id_aod_3">Session Countdown</string>
 
     <string name="id_sec_indicator">Hour Animation</string>
 
