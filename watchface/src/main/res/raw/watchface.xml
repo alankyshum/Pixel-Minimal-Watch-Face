@@ -829,15 +829,16 @@
 
         <!-- Opt-in AOD-only session countdown. Conditions select time-varying content. -->
         <Condition>
-            <!-- Keep the SLEEP arc dark for burn-in safety; the selected non-SLEEP endpoint expression deliberately has no overnight branch. -->
-            <Expressions><Expression name="sessionArcEnabled"><![CDATA[[HOUR_0_23] >= 6 && !([HOUR_0_23] >= 22)]]></Expression></Expressions>
+            <!-- This furnishing container deliberately covers every valid clock hour.
+                 Its children remain exclusively gated to Session Countdown AOD. -->
+            <Expressions><Expression name="sessionArcEnabled"><![CDATA[[HOUR_0_23] >= 0]]></Expression></Expressions>
             <Compare expression="sessionArcEnabled">
                 <PartDraw name="session_countdown_arc" width="450" height="450" x="0" y="0" alpha="0">
                     <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0" />
                     <Arc centerX="225" centerY="225" width="430" height="430" startAngle="0" endAngle="0" direction="CLOCKWISE">
                         <Transform target="startAngle" value="[HOUR_0_11] * 30 + [MINUTE] * 0.5"/>
-                        <!-- 360, not 0, preserves the clockwise 11:00–12:00 sweep. -->
-                        <Transform target="endAngle" value="[HOUR_0_23] >= 6 &amp;&amp; !([HOUR_0_23] >= 11) ? 330 : ([HOUR_0_23] >= 11 &amp;&amp; !([HOUR_0_23] >= 12) ? 360 : ([HOUR_0_23] >= 12 &amp;&amp; !([HOUR_0_23] >= 17) ? 150 : 300))"/>
+                        <!-- 180 is normalized: wrapped CLOCKWISE arc semantics supply the overnight sweep. -->
+                        <Transform target="endAngle" value="[HOUR_0_23] >= 22 || !([HOUR_0_23] >= 6) ? 180 : ([HOUR_0_23] >= 6 &amp;&amp; !([HOUR_0_23] >= 11) ? 330 : ([HOUR_0_23] >= 11 &amp;&amp; !([HOUR_0_23] >= 12) ? 360 : ([HOUR_0_23] >= 12 &amp;&amp; !([HOUR_0_23] >= 17) ? 150 : 300)))"/>
                         <Stroke color="#cccccc" cap="BUTT" thickness="3"/>
                     </Arc>
                 </PartDraw>
@@ -858,10 +859,12 @@
                 </Condition>
                 <Condition>
                     <Expressions>
+                        <Expression name="sessionEndSleep"><![CDATA[[HOUR_0_23] >= 22 || !([HOUR_0_23] >= 6)]]></Expression>
                         <Expression name="sessionEndPeak"><![CDATA[[HOUR_0_23] >= 6 && !([HOUR_0_23] >= 11)]]></Expression>
                         <Expression name="sessionEndTransition"><![CDATA[[HOUR_0_23] >= 11 && !([HOUR_0_23] >= 12)]]></Expression>
                         <Expression name="sessionEndTrough"><![CDATA[[HOUR_0_23] >= 12 && !([HOUR_0_23] >= 17)]]></Expression>
                     </Expressions>
+                    <Compare expression="sessionEndSleep"><PartText name="session_end_sleep" width="450" height="450" x="0" y="0" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><TextCircular centerX="225" centerY="225" width="390" height="390" startAngle="191" endAngle="169" direction="COUNTER_CLOCKWISE" align="CENTER"><Font color="#cccccc" family="nova_mono" size="24" weight="NORMAL" letterSpacing="-0.05">06:00</Font></TextCircular></PartText></Compare>
                     <Compare expression="sessionEndPeak"><PartText name="session_end_peak" width="450" height="450" x="0" y="0" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><TextCircular centerX="225" centerY="225" width="390" height="390" startAngle="319" endAngle="341" direction="CLOCKWISE" align="CENTER"><Font color="#cccccc" family="nova_mono" size="24" weight="NORMAL" letterSpacing="-0.05">11:00</Font></TextCircular></PartText></Compare>
                     <Compare expression="sessionEndTransition"><PartText name="session_end_transition" width="450" height="450" x="0" y="0" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><TextCircular centerX="225" centerY="225" width="390" height="390" startAngle="349" endAngle="11" direction="CLOCKWISE" align="CENTER"><Font color="#cccccc" family="nova_mono" size="24" weight="NORMAL" letterSpacing="-0.05">12:00</Font></TextCircular></PartText></Compare>
                     <Compare expression="sessionEndTrough"><PartText name="session_end_trough" width="450" height="450" x="0" y="0" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><TextCircular centerX="225" centerY="225" width="390" height="390" startAngle="161" endAngle="139" direction="COUNTER_CLOCKWISE" align="CENTER"><Font color="#cccccc" family="nova_mono" size="24" weight="NORMAL" letterSpacing="-0.05">17:00</Font></TextCircular></PartText></Compare>

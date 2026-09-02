@@ -41,12 +41,12 @@ MARKER_TO_CURRENT_PATH_CLEARANCE = 14.0
 # Deliberately independent of the WFF expressions below: this is the product
 # specification against which their *evaluated* results are checked.
 SESSION_SPEC = (
-    (0, 6, "SLEEP", 360, None),
+    (0, 6, "SLEEP", 360, 180),
     (6, 11, "PEAK", 660, 330),
     (11, 12, "TRANSITION", 720, 360),
     (12, 17, "TROUGH", 1020, 150),
     (17, 22, "PERSONAL", 1320, 300),
-    (22, 24, "SLEEP", 1800, None),
+    (22, 24, "SLEEP", 1800, 180),
 )
 UNRELATED_SLOT_SNAPSHOTS = {
     "0": "db6264d8e566bd140fd14642f8131a7ce10d7ca5287e9d1e0d1ee39f87cd9681",
@@ -503,6 +503,7 @@ def assert_paths(slot: ET.Element, options: list[ET.Element], *, one_line: bool 
 def endpoint_label_geometry(paths: dict[str, ET.Element]) -> dict[str, float]:
     """Extract endpoint-label centers/spans under their structural direction."""
     expected = {
+        "SLEEP": (180, 22),
         "PEAK": (330, 22),
         "TRANSITION": (0, 22),
         "TROUGH": (150, 22),
@@ -519,7 +520,7 @@ def endpoint_label_geometry(paths: dict[str, ET.Element]) -> dict[str, float]:
         span = (end - start) % 360 if direction == "CLOCKWISE" else (start - end) % 360
         center = (start + span / 2) % 360 if direction == "CLOCKWISE" else (start - span / 2) % 360
         assert (center, span) == expected[label], (label, start, end, center, span)
-        assert direction == ("COUNTER_CLOCKWISE" if label == "TROUGH" else "CLOCKWISE")
+        assert direction == ("COUNTER_CLOCKWISE" if label in {"SLEEP", "TROUGH"} else "CLOCKWISE")
         centers[label] = center
     return centers
 
@@ -702,6 +703,7 @@ def main() -> int:
     )
     assert arc_condition is not None
     arc_enabled_expression = arc_condition.find("Expressions/Expression").text
+    assert arc_enabled_expression == "[HOUR_0_23] >= 0"
     arc = arc_condition.find("Compare/PartDraw[@name='session_countdown_arc']")
     assert arc is not None and {key: arc.get(key) for key in ("width", "height", "x", "y", "alpha")} == {
         "width": "450", "height": "450", "x": "0", "y": "0", "alpha": "0",
@@ -791,15 +793,17 @@ def main() -> int:
     # as a proxy for a collision-free painted bound.
     assert current_radius + CURRENT_TIME_INK[1] / 2 < arc_radius - 1.5
     end_labels = {part.get("name"): part for part in arc_condition.findall(".//PartText") if (part.get("name") or "").startswith("session_end_")}
-    assert {name: part.find("TextCircular/Font").text for name, part in end_labels.items()} == {"session_end_peak": "11:00", "session_end_transition": "12:00", "session_end_trough": "17:00", "session_end_personal": "22:00"}
+    assert {name: part.find("TextCircular/Font").text for name, part in end_labels.items()} == {"session_end_sleep": "06:00", "session_end_peak": "11:00", "session_end_transition": "12:00", "session_end_trough": "17:00", "session_end_personal": "22:00"}
     assert all(part.find("TextCircular/Font/Template") is None for part in end_labels.values())
     assert all(part.find("TextCircular").get("width") == "390" for part in end_labels.values())
     assert all(part.find("TextCircular/Font").get("size") == "24" for part in end_labels.values())
+    assert all(part.find("TextCircular/Font").get("weight") == "NORMAL" for part in end_labels.values())
     assert all(part.find("TextCircular/Font").get("color") == SESSION_FADED_COLOR for part in end_labels.values())
     # Derive each label path from XML, then compare its center and clockwise
     # span to the independent endpoint-placement specification.  Checking both
     # catches a mutation to either source angle for every endpoint label.
     endpoint_paths = {
+        "SLEEP": end_labels["session_end_sleep"].find("TextCircular"),
         "PEAK": end_labels["session_end_peak"].find("TextCircular"),
         "TRANSITION": end_labels["session_end_transition"].find("TextCircular"),
         "TROUGH": end_labels["session_end_trough"].find("TextCircular"),
@@ -809,7 +813,7 @@ def main() -> int:
     endpoint_centers = endpoint_label_geometry(endpoint_paths)
     # Mutation-test every source endpoint in memory.  This proves that the
     # extraction above, rather than a duplicated fixed center, rejects either
-    # angle changing for PEAK, TRANSITION, TROUGH, or PERSONAL.
+    # angle changing for SLEEP, PEAK, TRANSITION, TROUGH, or PERSONAL.
     for label, path in endpoint_paths.items():
         for angle in ("startAngle", "endAngle"):
             source = path.get(angle)
@@ -834,19 +838,21 @@ def main() -> int:
     assert endpoint_condition is not None
     endpoint_expressions = {e.get("name"): e.text for e in endpoint_condition.findall("Expressions/Expression")}
     assert endpoint_expressions == {
+        "sessionEndSleep": "[HOUR_0_23] >= 22 || !([HOUR_0_23] >= 6)",
         "sessionEndPeak": label_expressions["isPeak"],
         "sessionEndTransition": label_expressions["isTransition"],
         "sessionEndTrough": label_expressions["isTrough"],
     }
     assert {compare.get("expression"): compare.find("PartText").get("name") for compare in endpoint_condition.findall("Compare")} == {
+        "sessionEndSleep": "session_end_sleep",
         "sessionEndPeak": "session_end_peak",
         "sessionEndTransition": "session_end_transition",
         "sessionEndTrough": "session_end_trough",
     }
     assert endpoint_condition.find("Default/PartText").get("name") == "session_end_personal"
     for clock_time, hour, minute, expected in (
-        ("00:00", 0, 0, (6, 0, "SLEEP", None)),
-        ("05:59", 5, 59, (0, 1, "SLEEP", None)),
+        ("00:00", 0, 0, (6, 0, "SLEEP", 180)),
+        ("05:59", 5, 59, (0, 1, "SLEEP", 180)),
         ("06:00", 6, 0, (5, 0, "PEAK", 330)),
         ("10:59", 10, 59, (0, 1, "PEAK", 330)),
         ("11:00", 11, 0, (1, 0, "TRANSITION", 360)),
@@ -856,8 +862,8 @@ def main() -> int:
         ("16:59", 16, 59, (0, 1, "TROUGH", 150)),
         ("17:00", 17, 0, (5, 0, "PERSONAL", 300)),
         ("21:59", 21, 59, (0, 1, "PERSONAL", 300)),
-        ("22:00", 22, 0, (8, 0, "SLEEP", None)),
-        ("23:59", 23, 59, (6, 1, "SLEEP", None)),
+        ("22:00", 22, 0, (8, 0, "SLEEP", 180)),
+        ("23:59", 23, 59, (6, 1, "SLEEP", 180)),
     ):
         actual = specified_session(hour, minute)
         assert actual == expected, (clock_time, actual)
@@ -868,9 +874,15 @@ def main() -> int:
     previous_current_center: float | None = None
     minimum_sat_clearance = math.inf
     minimum_sat_at: tuple[int, int, str] | None = None
+    minimum_sleep_sat_clearance = math.inf
+    minimum_sleep_sat_at: tuple[int, int] | None = None
+    sleep_minutes = 0
+    sleep_sweeps: list[float] = []
     for hour in range(24):
         for minute in range(60):
             expected_hours, expected_minutes, expected_label, expected_end = specified_session(hour, minute)
+            if expected_label == "SLEEP":
+                sleep_minutes += 1
             actual_hours = evaluate_wff(hours_expression, hour, minute)
             actual_minutes = evaluate_wff(minutes_expression, hour, minute)
             assert actual_hours == f"{expected_hours:02d}", (hour, minute, "hours", actual_hours)
@@ -883,7 +895,7 @@ def main() -> int:
             actual_label = next(label for name, label in expected_label_bindings.values() if name == selected_part.get("name")) if selected else "SLEEP"
             assert actual_label == expected_label, (hour, minute, actual_label)
             enabled = evaluate_wff(arc_enabled_expression, hour, minute)
-            assert enabled == (expected_end is not None), (hour, minute, enabled)
+            assert enabled is True, (hour, minute, enabled)
             if enabled:
                 assert evaluate_wff(transforms["endAngle"], hour, minute) == expected_end, (hour, minute, "endAngle")
                 start_angle = evaluate_wff(transforms["startAngle"], hour, minute)
@@ -916,7 +928,7 @@ def main() -> int:
                 # permitted by the structural hemisphere branch.
                 assert current_text.get("direction") == ("COUNTER_CLOCKWISE" if lower else "CLOCKWISE")
                 if previous_current_center is not None:
-                    # Consecutive non-SLEEP minutes advance by 0.5° even at
+                    # Consecutive session minutes advance by 0.5° even at
                     # normalized noon wrap: no geometry branch can teleport it.
                     assert (current_center - previous_current_center) % 360 == 0.5
                 previous_current_center = current_center
@@ -926,9 +938,11 @@ def main() -> int:
                 assert marker_path_clearance > MARKER_TO_CURRENT_PATH_CLEARANCE
                 # Current sits behind the marker: its leading path edge stops
                 # 8° before the arc begins, whose clockwise sweep continues to
-                # the session endpoint. This is checked at all 960 minutes.
+                # the session endpoint. This is checked at all 1,440 minutes.
                 current_leading_edge = (current_center + CURRENT_PATH_SPAN / 2) % 360
                 arc_sweep = (expected_end - start_angle) % 360
+                if expected_label == "SLEEP":
+                    sleep_sweeps.append(arc_sweep)
                 assert (start_angle - current_leading_edge) % 360 == CURRENT_TRAIL - CURRENT_PATH_SPAN / 2
                 assert 0 < arc_sweep < 360
                 assert not (0 <= (current_leading_edge - start_angle) % 360 <= arc_sweep)
@@ -947,6 +961,9 @@ def main() -> int:
                 if sat_clearance < minimum_sat_clearance:
                     minimum_sat_clearance = sat_clearance
                     minimum_sat_at = (hour, minute, expected_label)
+                if expected_label == "SLEEP" and sat_clearance < minimum_sleep_sat_clearance:
+                    minimum_sleep_sat_clearance = sat_clearance
+                    minimum_sleep_sat_at = (hour, minute)
                 assert sat_clearance > 0, (hour, minute, separation)
                 # The central ink's conservative outer radius is below the
                 # current path's r195.5 inner edge, so it cannot overlap the
@@ -962,14 +979,23 @@ def main() -> int:
                     (152.5, 222.5, 301.5, 241.5),  # TRANSITION: 149×19, +2/-2
                 )
                 assert all(boxes_disjoint(endpoint_box, box) for box in central_boxes), (hour, minute, endpoint_box)
-                expected_end_part = {"PEAK": "session_end_peak", "TRANSITION": "session_end_transition", "TROUGH": "session_end_trough", "PERSONAL": "session_end_personal"}[expected_label]
+                expected_end_part = {"SLEEP": "session_end_sleep", "PEAK": "session_end_peak", "TRANSITION": "session_end_transition", "TROUGH": "session_end_trough", "PERSONAL": "session_end_personal"}[expected_label]
                 selected_end = [name for name, source in endpoint_expressions.items() if evaluate_wff(source, hour, minute)]
-                actual_end_part = ({"sessionEndPeak": "session_end_peak", "sessionEndTransition": "session_end_transition", "sessionEndTrough": "session_end_trough"}[selected_end[0]] if selected_end else "session_end_personal")
+                assert len(selected_end) <= 1, (hour, minute, selected_end)
+                actual_end_part = ({"sessionEndSleep": "session_end_sleep", "sessionEndPeak": "session_end_peak", "sessionEndTransition": "session_end_transition", "sessionEndTrough": "session_end_trough"}[selected_end[0]] if selected_end else "session_end_personal")
                 assert actual_end_part == expected_end_part, (hour, minute, actual_end_part)
-            else:
-                # The enclosing Compare has no Default: arc, marker, current
-                # annotation, and endpoint annotation are all absent in SLEEP.
-                assert not arc_condition.findall("Default")
+    assert sleep_minutes == 480
+    assert len(sleep_sweeps) == 480
+    assert min(sleep_sweeps) == 0.5 and max(sleep_sweeps) == 240
+    assert minimum_sleep_sat_at is not None
+    # Normalized endpoint 180 with CLOCKWISE wrapping produces these boundary
+    # fixtures without relying on an out-of-range 540° endpoint.
+    for clock_time, hour, minute, expected_sweep in (
+        ("22:00", 22, 0, 240), ("23:59", 23, 59, 180.5),
+        ("00:00", 0, 0, 180), ("05:59", 5, 59, 0.5),
+    ):
+        hand_angle = (hour % 12) * 30 + minute * 0.5
+        assert (180 - hand_angle) % 360 == expected_sweep, clock_time
     assert (14 % 12) * 30 + 30 * 0.5 == 75
     # Arc end 360° is valid WFF sweep geometry; all TextCircular source angles
     # are normalized. The existing 305→55° TextCircular pattern establishes
@@ -1099,8 +1125,11 @@ def main() -> int:
         path_bounds(part, text)
     print(
         "Nova Mono, safe adaptive arc, hour animation, AOD session countdown, and safety invariants verified; "
+        "all-minute evaluation=1440 (SLEEP=480); SLEEP sweep=0.5..240°; "
         f"minimum current/endpoint SAT clearance={minimum_sat_clearance:.6f}px at "
         f"{minimum_sat_at[0]:02d}:{minimum_sat_at[1]:02d} {minimum_sat_at[2]}; "
+        f"minimum SLEEP current/06:00 SAT clearance={minimum_sleep_sat_clearance:.6f}px at "
+        f"{minimum_sleep_sat_at[0]:02d}:{minimum_sleep_sat_at[1]:02d}; "
         f"marker/current-path clearance={marker_path_clearance:.6f}px"
     )
     return 0
