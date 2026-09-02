@@ -450,6 +450,27 @@ def assert_paths(slot: ET.Element, options: list[ET.Element], *, one_line: bool 
                 assert paths[0].find("Font/Template").text == "%s"
 
 
+def endpoint_label_geometry(paths: dict[str, ET.Element]) -> dict[str, float]:
+    """Extract and validate endpoint-label centers and clockwise path spans."""
+    expected = {
+        "PEAK": (330, 22),
+        "TRANSITION": (0, 22),
+        "TROUGH": (150, 22),
+        "PERSONAL": (300, 22),
+    }
+    assert set(paths) == set(expected)
+    centers: dict[str, float] = {}
+    for label, path in paths.items():
+        source_angles = tuple(path.get(angle) for angle in ("startAngle", "endAngle"))
+        assert all(angle is not None for angle in source_angles), (label, source_angles)
+        start, end = (float(angle) for angle in source_angles)
+        span = (end - start) % 360
+        center = (start + span / 2) % 360
+        assert (center, span) == expected[label], (label, start, end, center, span)
+        centers[label] = center
+    return centers
+
+
 def main() -> int:
     if sys.flags.optimize:
         raise RuntimeError("verify_font_mapping.py must not run with Python optimization enabled")
@@ -671,8 +692,33 @@ def main() -> int:
     assert all(part.find("TextCircular/Font/Template") is None for part in end_labels.values())
     assert all(part.find("TextCircular").get("width") == "390" for part in end_labels.values())
     assert all(part.find("TextCircular/Font").get("size") == "24" for part in end_labels.values())
-    assert end_labels["session_end_transition"].find("TextCircular").get("startAngle") == "349"
-    assert end_labels["session_end_transition"].find("TextCircular").get("endAngle") == "11"
+    # Derive each label path from XML, then compare its center and clockwise
+    # span to the independent endpoint-placement specification.  Checking both
+    # catches a mutation to either source angle for every endpoint label.
+    endpoint_paths = {
+        "PEAK": end_labels["session_end_peak"].find("TextCircular"),
+        "TRANSITION": end_labels["session_end_transition"].find("TextCircular"),
+        "TROUGH": end_labels["session_end_trough"].find("TextCircular"),
+        "PERSONAL": end_labels["session_end_personal"].find("TextCircular"),
+    }
+    assert all(path is not None for path in endpoint_paths.values())
+    assert all(path.get("direction") == "CLOCKWISE" for path in endpoint_paths.values())
+    endpoint_centers = endpoint_label_geometry(endpoint_paths)
+    # Mutation-test every source endpoint in memory.  This proves that the
+    # extraction above, rather than a duplicated fixed center, rejects either
+    # angle changing for PEAK, TRANSITION, TROUGH, or PERSONAL.
+    for label, path in endpoint_paths.items():
+        for angle in ("startAngle", "endAngle"):
+            source = path.get(angle)
+            assert source is not None
+            path.set(angle, str(float(source) + 1))
+            try:
+                endpoint_label_geometry(endpoint_paths)
+            except AssertionError:
+                pass
+            else:
+                raise AssertionError(f"{label} {angle} mutation survived")
+            path.set(angle, source)
     # Endpoint labels use r195. Their conservative ink box is intentionally
     # verified by Euclidean distance at every rendered current-time position;
     # neither label relies on letter spacing or a radial-only fit claim.
@@ -750,7 +796,7 @@ def main() -> int:
                     assert (current_center - previous_current_center) % 360 == 0.5
                 previous_current_center = current_center
                 assert 2 * current_radius * math.sin(math.radians((trail - 12) / 2)) > 14
-                endpoint_angle = {"PEAK": 330, "TRANSITION": 0, "TROUGH": 150, "PERSONAL": 300}[expected_label]
+                endpoint_angle = endpoint_centers[expected_label]
                 # At the final half-degree session minute the 20° trail is
                 # still radially separated. Bounding both measured ink boxes
                 # by their half diagonals proves no endpoint overlap.
@@ -791,8 +837,6 @@ def main() -> int:
         '<Arc startAngle="330" endAngle="360" direction="CLOCKWISE"/>'
     ))
     assert transition_sweep == [330.0, 360.0, 360]
-    transition_label = end_labels["session_end_transition"].find("TextCircular")
-    assert (transition_label.get("startAngle"), transition_label.get("endAngle"), transition_label.get("direction")) == ("349", "11", "CLOCKWISE")
     assert all(
         0 <= float(part.find("TextCircular").get(angle)) <= 360
         for part in end_labels.values() for angle in ("startAngle", "endAngle")
