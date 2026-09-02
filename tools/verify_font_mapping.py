@@ -34,7 +34,7 @@ MINUTES_ROW_INK = (250, 117)     # `00m` at 158px
 CURRENT_TIME_INK = (66, 19)
 WORST_ENDPOINT_INK = (66, 19)
 SESSION_FADED_COLOR = "#cccccc"
-SESSION_OPTICAL_OFFSET = (2.0, -2.0)
+SESSION_OPTICAL_OFFSET = (4.0, -4.0)
 CURRENT_TRAIL = 19.0
 CURRENT_PATH_SPAN = 22.0
 MARKER_TO_CURRENT_PATH_CLEARANCE = 14.0
@@ -284,16 +284,16 @@ def assert_zero_padded_countdown(expression: str, operator: str) -> None:
 
 
 def assert_session_part_containment(part: ET.Element) -> None:
-    """Pin each central raster, including its intentional x=2 blank overrun."""
+    """Pin each central raster, including its intentional x=4 blank overrun."""
     expected = {
-        "session_countdown_hours": (2.0, 66.0, 450.0, 158.0),
-        "session_countdown_minutes": (2.0, 224.0, 450.0, 158.0),
-        **{f"session_countdown_{label}": (2.0, 219.0, 450.0, 26.0)
+        "session_countdown_hours": (4.0, 64.0, 450.0, 158.0),
+        "session_countdown_minutes": (4.0, 222.0, 450.0, 158.0),
+        **{f"session_countdown_{label}": (4.0, 217.0, 450.0, 26.0)
            for label in ("peak", "transition", "trough", "personal", "sleep")},
     }
     geometry = tuple(float(part.get(key)) for key in ("x", "y", "width", "height"))
     assert geometry == expected[part.get("name")], (part.get("name"), geometry)
-    # x=2,width=450 deliberately makes blank raster reach x=452; actual ink
+    # x=4,width=450 deliberately makes blank raster reach x=454; actual ink
     # from this center is separately proved inside the circular display.
     assert geometry[0] + geometry[2] == FACE_RADIUS * 2 + SESSION_OPTICAL_OFFSET[0]
 
@@ -412,7 +412,7 @@ def assert_approved_session_faded_color(color: str) -> None:
 
 
 def assert_session_countdown_centering(parts: list[ET.Element]) -> None:
-    """All seven central rasters share the specified +2px/-2px optical shift."""
+    """All seven central rasters share the specified +4px/-4px optical shift."""
     assert len(parts) == 7
     for part in parts:
         baseline_y = {"session_countdown_hours": 68, "session_countdown_minutes": 226}.get(part.get("name"), 221)
@@ -653,7 +653,7 @@ def main() -> int:
     assert [(float(p.get("y")) + (float(p.get("height")) - ink[1]) / 2,
               float(p.get("y")) + (float(p.get("height")) + ink[1]) / 2)
              for p, ink in ((countdown["session_countdown_hours"], HOURS_ROW_INK),
-                            (countdown["session_countdown_minutes"], MINUTES_ROW_INK))] == [(86, 204), (244.5, 361.5)]
+                            (countdown["session_countdown_minutes"], MINUTES_ROW_INK))] == [(84, 202), (242.5, 359.5)]
     label_condition = next(
         (condition for condition in root.findall(".//Scene/Condition")
          if condition.find("Expressions/Expression[@name='isPeak']") is not None),
@@ -664,7 +664,12 @@ def main() -> int:
         expression.get("name"): expression.text
         for expression in label_condition.findall("Expressions/Expression")
     }
-    assert set(label_expressions) == {"isPeak", "isTransition", "isTrough", "isPersonal"}
+    assert label_expressions == {
+        "isPeak": "[HOUR_0_23] >= 6 && !([HOUR_0_23] >= 11)",
+        "isTransition": "[HOUR_0_23] >= 11 && !([HOUR_0_23] >= 12)",
+        "isTrough": "[HOUR_0_23] >= 12 && !([HOUR_0_23] >= 17)",
+        "isPersonal": "[HOUR_0_23] >= 17 && !([HOUR_0_23] >= 22)",
+    }
     label_bindings = {
         compare.get("expression"): compare.find("PartText")
         for compare in label_condition.findall("Compare")
@@ -687,10 +692,10 @@ def main() -> int:
     assert default_part.find("Text/Font").text == "SLEEP"
     assert default_part.find("Text/Font/Template") is None
     # The 26px label's measured 19px ink is centred in the 40.5px row gap:
-    # y=222.5..241.5 leaves 18.5px below hours and exactly 3px above minutes.
+    # y=220.5..239.5 leaves 18.5px below hours and exactly 3px above minutes.
     label_ink_top = float(default_part.get("y")) + (float(default_part.get("height")) - 19) / 2
-    assert label_ink_top - 204 == 18.5
-    assert 244.5 - (label_ink_top + 19) == 3
+    assert label_ink_top - 202 == 18.5
+    assert 242.5 - (label_ink_top + 19) == 3
     for name, label in (("session_countdown_peak", "PEAK"), ("session_countdown_transition", "TRANSITION"),
                         ("session_countdown_trough", "TROUGH"), ("session_countdown_personal", "PERSONAL"),
                         ("session_countdown_sleep", "SLEEP")):
@@ -839,9 +844,9 @@ def main() -> int:
     endpoint_expressions = {e.get("name"): e.text for e in endpoint_condition.findall("Expressions/Expression")}
     assert endpoint_expressions == {
         "sessionEndSleep": "[HOUR_0_23] >= 22 || !([HOUR_0_23] >= 6)",
-        "sessionEndPeak": label_expressions["isPeak"],
-        "sessionEndTransition": label_expressions["isTransition"],
-        "sessionEndTrough": label_expressions["isTrough"],
+        "sessionEndPeak": "[HOUR_0_23] >= 6 && !([HOUR_0_23] >= 11)",
+        "sessionEndTransition": "[HOUR_0_23] >= 11 && !([HOUR_0_23] >= 12)",
+        "sessionEndTrough": "[HOUR_0_23] >= 12 && !([HOUR_0_23] >= 17)",
     }
     assert {compare.get("expression"): compare.find("PartText").get("name") for compare in endpoint_condition.findall("Compare")} == {
         "sessionEndSleep": "session_end_sleep",
