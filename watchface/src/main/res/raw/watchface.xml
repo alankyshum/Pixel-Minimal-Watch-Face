@@ -838,7 +838,7 @@
                         <Transform target="startAngle" value="[HOUR_0_11] * 30 + [MINUTE] * 0.5"/>
                         <!-- 360, not 0, preserves the clockwise 11:00–12:00 sweep. -->
                         <Transform target="endAngle" value="[HOUR_0_23] >= 6 &amp;&amp; !([HOUR_0_23] >= 11) ? 330 : ([HOUR_0_23] >= 11 &amp;&amp; !([HOUR_0_23] >= 12) ? 360 : ([HOUR_0_23] >= 12 &amp;&amp; !([HOUR_0_23] >= 17) ? 150 : 300))"/>
-                        <Stroke color="#ffffff" cap="BUTT" thickness="3"/>
+                        <Stroke color="#888888" cap="BUTT" thickness="3"/>
                     </Arc>
                 </PartDraw>
                 <!-- A full-face, normalized-pivot group keeps the rotation centre schema-local.
@@ -849,34 +849,31 @@
                     <Transform target="angle" value="[HOUR_0_11] * 30 + [MINUTE] * 0.5"/>
                     <PartImage width="14" height="12" x="218" y="8"><Image resource="session_current_marker"/></PartImage>
                 </Group>
-                <!-- The 24px current time keeps a constant 20° counter-clockwise trail.
-                     TextCircular is used because WFF v2 cannot dynamically transform x/y. -->
-                <PartText name="session_current_time" width="450" height="450" x="0" y="0" alpha="0">
-                    <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/>
-                    <TextCircular centerX="225" centerY="225" width="408" height="408" startAngle="0" endAngle="24" direction="CLOCKWISE" align="CENTER">
-                        <Transform target="startAngle" value="[HOUR_0_11] * 30 + [MINUTE] * 0.5 >= 32 ? [HOUR_0_11] * 30 + [MINUTE] * 0.5 - 32 : [HOUR_0_11] * 30 + [MINUTE] * 0.5 + 328"/>
-                        <Transform target="endAngle" value="[HOUR_0_11] * 30 + [MINUTE] * 0.5 >= 8 ? [HOUR_0_11] * 30 + [MINUTE] * 0.5 - 8 : [HOUR_0_11] * 30 + [MINUTE] * 0.5 + 352"/>
-                        <Font color="#ffffff" family="nova_mono" size="24" weight="NORMAL" letterSpacing="-0.05"><Template>%s<Parameter expression="icuText(&quot;HH:mm&quot;, [UTC_TIMESTAMP])"/></Template></Font>
-                    </TextCircular>
-                </PartText>
+                <!-- Direction is structural in WFF v2. Branching preserves one physical
+                     22° path while keeping glyph tops outward above and inward below. -->
+                <Condition>
+                    <Expressions><Expression name="sessionCurrentLower"><![CDATA[[HOUR_0_11] * 30 + [MINUTE] * 0.5 >= 109 && [HOUR_0_11] * 30 + [MINUTE] * 0.5 <= 289]]></Expression></Expressions>
+                    <Compare expression="sessionCurrentLower"><PartText name="session_current_time_lower" width="450" height="450" x="0" y="0" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><TextCircular centerX="225" centerY="225" width="406" height="406" startAngle="0" endAngle="0" direction="COUNTER_CLOCKWISE" align="CENTER"><Transform target="startAngle" value="[HOUR_0_11] * 30 + [MINUTE] * 0.5 >= 8 ? [HOUR_0_11] * 30 + [MINUTE] * 0.5 - 8 : [HOUR_0_11] * 30 + [MINUTE] * 0.5 + 352"/><Transform target="endAngle" value="[HOUR_0_11] * 30 + [MINUTE] * 0.5 >= 30 ? [HOUR_0_11] * 30 + [MINUTE] * 0.5 - 30 : [HOUR_0_11] * 30 + [MINUTE] * 0.5 + 330"/><Font color="#ffffff" family="nova_mono" size="24" weight="NORMAL" letterSpacing="-0.05"><Template>%s<Parameter expression="icuText(&quot;HH:mm&quot;, [UTC_TIMESTAMP])"/></Template></Font></TextCircular></PartText></Compare>
+                    <Default><PartText name="session_current_time_upper" width="450" height="450" x="0" y="0" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><TextCircular centerX="225" centerY="225" width="406" height="406" startAngle="0" endAngle="0" direction="CLOCKWISE" align="CENTER"><Transform target="startAngle" value="[HOUR_0_11] * 30 + [MINUTE] * 0.5 >= 30 ? [HOUR_0_11] * 30 + [MINUTE] * 0.5 - 30 : [HOUR_0_11] * 30 + [MINUTE] * 0.5 + 330"/><Transform target="endAngle" value="[HOUR_0_11] * 30 + [MINUTE] * 0.5 >= 8 ? [HOUR_0_11] * 30 + [MINUTE] * 0.5 - 8 : [HOUR_0_11] * 30 + [MINUTE] * 0.5 + 352"/><Font color="#ffffff" family="nova_mono" size="24" weight="NORMAL" letterSpacing="-0.05"><Template>%s<Parameter expression="icuText(&quot;HH:mm&quot;, [UTC_TIMESTAMP])"/></Template></Font></TextCircular></PartText></Default>
+                </Condition>
                 <Condition>
                     <Expressions>
                         <Expression name="sessionEndPeak"><![CDATA[[HOUR_0_23] >= 6 && !([HOUR_0_23] >= 11)]]></Expression>
                         <Expression name="sessionEndTransition"><![CDATA[[HOUR_0_23] >= 11 && !([HOUR_0_23] >= 12)]]></Expression>
                         <Expression name="sessionEndTrough"><![CDATA[[HOUR_0_23] >= 12 && !([HOUR_0_23] >= 17)]]></Expression>
                     </Expressions>
-                    <Compare expression="sessionEndPeak"><PartText name="session_end_peak" width="450" height="450" x="0" y="0" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><TextCircular centerX="225" centerY="225" width="390" height="390" startAngle="319" endAngle="341" direction="CLOCKWISE" align="CENTER"><Font color="#ffffff" family="nova_mono" size="24" weight="NORMAL" letterSpacing="-0.05">11:00</Font></TextCircular></PartText></Compare>
-                    <Compare expression="sessionEndTransition"><PartText name="session_end_transition" width="450" height="450" x="0" y="0" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><TextCircular centerX="225" centerY="225" width="390" height="390" startAngle="349" endAngle="11" direction="CLOCKWISE" align="CENTER"><Font color="#ffffff" family="nova_mono" size="24" weight="NORMAL" letterSpacing="-0.05">12:00</Font></TextCircular></PartText></Compare>
-                    <Compare expression="sessionEndTrough"><PartText name="session_end_trough" width="450" height="450" x="0" y="0" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><TextCircular centerX="225" centerY="225" width="390" height="390" startAngle="139" endAngle="161" direction="CLOCKWISE" align="CENTER"><Font color="#ffffff" family="nova_mono" size="24" weight="NORMAL" letterSpacing="-0.05">17:00</Font></TextCircular></PartText></Compare>
-                    <Default><PartText name="session_end_personal" width="450" height="450" x="0" y="0" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><TextCircular centerX="225" centerY="225" width="390" height="390" startAngle="289" endAngle="311" direction="CLOCKWISE" align="CENTER"><Font color="#ffffff" family="nova_mono" size="24" weight="NORMAL" letterSpacing="-0.05">22:00</Font></TextCircular></PartText></Default>
+                    <Compare expression="sessionEndPeak"><PartText name="session_end_peak" width="450" height="450" x="0" y="0" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><TextCircular centerX="225" centerY="225" width="390" height="390" startAngle="319" endAngle="341" direction="CLOCKWISE" align="CENTER"><Font color="#888888" family="nova_mono" size="24" weight="NORMAL" letterSpacing="-0.05">11:00</Font></TextCircular></PartText></Compare>
+                    <Compare expression="sessionEndTransition"><PartText name="session_end_transition" width="450" height="450" x="0" y="0" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><TextCircular centerX="225" centerY="225" width="390" height="390" startAngle="349" endAngle="11" direction="CLOCKWISE" align="CENTER"><Font color="#888888" family="nova_mono" size="24" weight="NORMAL" letterSpacing="-0.05">12:00</Font></TextCircular></PartText></Compare>
+                    <Compare expression="sessionEndTrough"><PartText name="session_end_trough" width="450" height="450" x="0" y="0" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><TextCircular centerX="225" centerY="225" width="390" height="390" startAngle="161" endAngle="139" direction="COUNTER_CLOCKWISE" align="CENTER"><Font color="#888888" family="nova_mono" size="24" weight="NORMAL" letterSpacing="-0.05">17:00</Font></TextCircular></PartText></Compare>
+                    <Default><PartText name="session_end_personal" width="450" height="450" x="0" y="0" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><TextCircular centerX="225" centerY="225" width="390" height="390" startAngle="289" endAngle="311" direction="CLOCKWISE" align="CENTER"><Font color="#888888" family="nova_mono" size="24" weight="NORMAL" letterSpacing="-0.05">22:00</Font></TextCircular></PartText></Default>
                 </Condition>
             </Compare>
         </Condition>
-        <PartText name="session_countdown_hours" width="450" height="158" x="0" y="68" alpha="0">
+        <PartText name="session_countdown_hours" width="450" height="158" x="2" y="66" alpha="0">
             <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0" />
             <Text align="CENTER"><Font color="#ffffff" family="nova_mono" size="158" weight="NORMAL" letterSpacing="-0.05"><Template>%sh<Parameter expression="numberFormat(&quot;00&quot;, floor((([HOUR_0_23] >= 6 &amp;&amp; !([HOUR_0_23] >= 11) ? 660 : ([HOUR_0_23] >= 11 &amp;&amp; !([HOUR_0_23] >= 12) ? 720 : ([HOUR_0_23] >= 12 &amp;&amp; !([HOUR_0_23] >= 17) ? 1020 : ([HOUR_0_23] >= 17 &amp;&amp; !([HOUR_0_23] >= 22) ? 1320 : ([HOUR_0_23] >= 22 ? 1800 : 360))))) - ([HOUR_0_23] * 60 + [MINUTE])) / 60))"/></Template></Font></Text>
         </PartText>
-        <PartText name="session_countdown_minutes" width="450" height="158" x="0" y="226" alpha="0">
+        <PartText name="session_countdown_minutes" width="450" height="158" x="2" y="224" alpha="0">
             <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0" />
             <Text align="CENTER"><Font color="#ffffff" family="nova_mono" size="158" weight="NORMAL" letterSpacing="-0.05"><Template>%sm<Parameter expression="numberFormat(&quot;00&quot;, floor((([HOUR_0_23] >= 6 &amp;&amp; !([HOUR_0_23] >= 11) ? 660 : ([HOUR_0_23] >= 11 &amp;&amp; !([HOUR_0_23] >= 12) ? 720 : ([HOUR_0_23] >= 12 &amp;&amp; !([HOUR_0_23] >= 17) ? 1020 : ([HOUR_0_23] >= 17 &amp;&amp; !([HOUR_0_23] >= 22) ? 1320 : ([HOUR_0_23] >= 22 ? 1800 : 360))))) - ([HOUR_0_23] * 60 + [MINUTE])) % 60))"/></Template></Font></Text>
         </PartText>
@@ -888,11 +885,11 @@
                 <Expression name="isTrough"><![CDATA[[HOUR_0_23] >= 12 && !([HOUR_0_23] >= 17)]]></Expression>
                 <Expression name="isPersonal"><![CDATA[[HOUR_0_23] >= 17 && !([HOUR_0_23] >= 22)]]></Expression>
             </Expressions>
-            <Compare expression="isPeak"><PartText name="session_countdown_peak" width="450" height="26" x="0" y="221" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#ffffff" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">PEAK</Font></Text></PartText></Compare>
-            <Compare expression="isTransition"><PartText name="session_countdown_transition" width="450" height="26" x="0" y="221" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#ffffff" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">TRANSITION</Font></Text></PartText></Compare>
-            <Compare expression="isTrough"><PartText name="session_countdown_trough" width="450" height="26" x="0" y="221" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#ffffff" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">TROUGH</Font></Text></PartText></Compare>
-            <Compare expression="isPersonal"><PartText name="session_countdown_personal" width="450" height="26" x="0" y="221" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#ffffff" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">PERSONAL</Font></Text></PartText></Compare>
-            <Default><PartText name="session_countdown_sleep" width="450" height="26" x="0" y="221" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#ffffff" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">SLEEP</Font></Text></PartText></Default>
+            <Compare expression="isPeak"><PartText name="session_countdown_peak" width="450" height="26" x="2" y="219" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#888888" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">PEAK</Font></Text></PartText></Compare>
+            <Compare expression="isTransition"><PartText name="session_countdown_transition" width="450" height="26" x="2" y="219" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#888888" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">TRANSITION</Font></Text></PartText></Compare>
+            <Compare expression="isTrough"><PartText name="session_countdown_trough" width="450" height="26" x="2" y="219" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#888888" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">TROUGH</Font></Text></PartText></Compare>
+            <Compare expression="isPersonal"><PartText name="session_countdown_personal" width="450" height="26" x="2" y="219" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#888888" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">PERSONAL</Font></Text></PartText></Compare>
+            <Default><PartText name="session_countdown_sleep" width="450" height="26" x="2" y="219" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#888888" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">SLEEP</Font></Text></PartText></Default>
         </Condition>
     </Scene>
 </WatchFace>

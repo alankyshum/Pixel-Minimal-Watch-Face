@@ -28,8 +28,16 @@ SESSION_SAFE_INK_RADIUS = 217.2
 # substituting the largest row's box for both is an inaccurate metric claim.
 HOURS_ROW_INK = (243, 118)       # `00h` at 158px
 MINUTES_ROW_INK = (250, 117)     # `00m` at 158px
-CURRENT_TIME_INK = (64, 17)      # `00:00` at 24px
-WORST_ENDPOINT_INK = (63, 19)    # `17:00` at 24px
+# Approved conservative painted-ink envelope for each shipped 24px session
+# time string. It is a verifier pin, not a renderer-specific precision claim.
+# Do not substitute synthetic SEMI_BOLD: the bundled file is Regular (OS/2 400).
+CURRENT_TIME_INK = (66, 19)
+WORST_ENDPOINT_INK = (66, 19)
+SESSION_FADED_COLOR = "#888888"
+SESSION_OPTICAL_OFFSET = (2.0, -2.0)
+CURRENT_TRAIL = 19.0
+CURRENT_PATH_SPAN = 22.0
+MARKER_TO_CURRENT_PATH_CLEARANCE = 14.0
 # Deliberately independent of the WFF expressions below: this is the product
 # specification against which their *evaluated* results are checked.
 SESSION_SPEC = (
@@ -276,17 +284,18 @@ def assert_zero_padded_countdown(expression: str, operator: str) -> None:
 
 
 def assert_session_part_containment(part: ET.Element) -> None:
-    """Every countdown raster is contained by the square face canvas.
-
-    The large centred rows intentionally have rectangular raster corners beyond
-    the circular display; their measured glyph ink, rather than blank raster
-    area, is separately proved inside the circular screen below.
-    """
-    x, y = float(part.get("x")), float(part.get("y"))
-    width, height = float(part.get("width")), float(part.get("height"))
-    for point_x in (x, x + width):
-        for point_y in (y, y + height):
-            assert 0 <= point_x <= FACE_RADIUS * 2 and 0 <= point_y <= FACE_RADIUS * 2
+    """Pin each central raster, including its intentional x=2 blank overrun."""
+    expected = {
+        "session_countdown_hours": (2.0, 66.0, 450.0, 158.0),
+        "session_countdown_minutes": (2.0, 224.0, 450.0, 158.0),
+        **{f"session_countdown_{label}": (2.0, 219.0, 450.0, 26.0)
+           for label in ("peak", "transition", "trough", "personal", "sleep")},
+    }
+    geometry = tuple(float(part.get(key)) for key in ("x", "y", "width", "height"))
+    assert geometry == expected[part.get("name")], (part.get("name"), geometry)
+    # x=2,width=450 deliberately makes blank raster reach x=452; actual ink
+    # from this center is separately proved inside the circular display.
+    assert geometry[0] + geometry[2] == FACE_RADIUS * 2 + SESSION_OPTICAL_OFFSET[0]
 
 
 def radius_for_box(half_width: float, y_from_center: float) -> float:
@@ -365,11 +374,44 @@ def boxes_disjoint(left: tuple[float, float, float, float], right: tuple[float, 
     return left[2] < right[0] or right[2] < left[0] or left[3] < right[1] or right[3] < left[1]
 
 
+def oriented_text_box(radius: float, angle: float, width: float, height: float) -> tuple[tuple[float, float], ...]:
+    """Measured text ink rectangle, tangent to its circular baseline."""
+    radians = math.radians(angle)
+    center = (FACE_RADIUS + radius * math.sin(radians), FACE_RADIUS - radius * math.cos(radians))
+    tangent, radial = (math.cos(radians), math.sin(radians)), (math.sin(radians), -math.cos(radians))
+    return tuple((center[0] + horizontal * width / 2 * tangent[0] + vertical * height / 2 * radial[0], center[1] + horizontal * width / 2 * tangent[1] + vertical * height / 2 * radial[1]) for horizontal in (-1, 1) for vertical in (-1, 1))
+
+
+def oriented_box_clearance(left: tuple[tuple[float, float], ...], right: tuple[tuple[float, float], ...]) -> float:
+    """Maximum positive projection gap over both rectangles' edge normals.
+
+    This is the exact SAT separation criterion used here: a positive result
+    proves non-overlap; zero or negative means no separating axis and fails.
+    It is deliberately reported as SAT clearance, not Euclidean distance.
+    """
+    axes = []
+    for box in (left, right):
+        for first, second in ((0, 1), (0, 2)):
+            dx, dy = box[second][0] - box[first][0], box[second][1] - box[first][1]
+            length = math.hypot(dx, dy)
+            assert length > 0
+            axes.append((-dy / length, dx / length))
+    return max(max(min(x * point[0] + y * point[1] for point in right) - max(x * point[0] + y * point[1] for point in left), min(x * point[0] + y * point[1] for point in left) - max(x * point[0] + y * point[1] for point in right)) for x, y in axes)
+
+
+def assert_approved_session_ink_constants(current: tuple[int, int], endpoint: tuple[int, int]) -> None:
+    """Fail closed on any reduction of the hash-pinned-source safety bounds."""
+    assert current == (66, 19), current
+    assert endpoint == (66, 19), endpoint
+
+
 def assert_session_countdown_centering(parts: list[ET.Element]) -> None:
-    """The two countdown rows and five session labels center on the 450px face."""
+    """All seven central rasters share the specified +2px/-2px optical shift."""
     assert len(parts) == 7
     for part in parts:
-        assert float(part.get("x")) + float(part.get("width")) / 2 == FACE_RADIUS
+        baseline_y = {"session_countdown_hours": 68, "session_countdown_minutes": 226}.get(part.get("name"), 221)
+        assert float(part.get("x")) + float(part.get("width")) / 2 == FACE_RADIUS + SESSION_OPTICAL_OFFSET[0]
+        assert float(part.get("y")) == baseline_y + SESSION_OPTICAL_OFFSET[1]
 
 
 def assert_stacked_countdown_ink(hours: ET.Element, minutes: ET.Element) -> None:
@@ -410,14 +452,16 @@ def assert_session_text_ink_containment(countdown: dict[str, ET.Element]) -> Non
         ("session_countdown_minutes", MINUTES_ROW_INK),
     ):
         part = countdown[name]
+        ink_x = float(part.get("x")) + float(part.get("width")) / 2 - FACE_RADIUS
         ink_y = float(part.get("y")) + float(part.get("height")) / 2 - FACE_RADIUS
-        assert radius_for_box(ink_width / 2, abs(ink_y) + ink_height / 2) <= SESSION_SAFE_INK_RADIUS
+        assert radius_for_box(abs(ink_x) + ink_width / 2, abs(ink_y) + ink_height / 2) <= SESSION_SAFE_INK_RADIUS < FACE_RADIUS
     for name in ("session_countdown_peak", "session_countdown_transition",
                  "session_countdown_trough", "session_countdown_personal",
                  "session_countdown_sleep"):
         part = countdown[name]
+        ink_x = float(part.get("x")) + float(part.get("width")) / 2 - FACE_RADIUS
         ink_y = float(part.get("y")) + float(part.get("height")) / 2 - FACE_RADIUS
-        assert radius_for_box(74.5, abs(ink_y) + 9.5) <= SESSION_SAFE_INK_RADIUS
+        assert radius_for_box(abs(ink_x) + 74.5, abs(ink_y) + 9.5) <= SESSION_SAFE_INK_RADIUS < FACE_RADIUS
 
 
 def render_countdown_template(template: str, value: str) -> str:
@@ -451,7 +495,7 @@ def assert_paths(slot: ET.Element, options: list[ET.Element], *, one_line: bool 
 
 
 def endpoint_label_geometry(paths: dict[str, ET.Element]) -> dict[str, float]:
-    """Extract and validate endpoint-label centers and clockwise path spans."""
+    """Extract endpoint-label centers/spans under their structural direction."""
     expected = {
         "PEAK": (330, 22),
         "TRANSITION": (0, 22),
@@ -464,9 +508,12 @@ def endpoint_label_geometry(paths: dict[str, ET.Element]) -> dict[str, float]:
         source_angles = tuple(path.get(angle) for angle in ("startAngle", "endAngle"))
         assert all(angle is not None for angle in source_angles), (label, source_angles)
         start, end = (float(angle) for angle in source_angles)
-        span = (end - start) % 360
-        center = (start + span / 2) % 360
+        direction = path.get("direction")
+        assert direction in {"CLOCKWISE", "COUNTER_CLOCKWISE"}
+        span = (end - start) % 360 if direction == "CLOCKWISE" else (start - end) % 360
+        center = (start + span / 2) % 360 if direction == "CLOCKWISE" else (start - span / 2) % 360
         assert (center, span) == expected[label], (label, start, end, center, span)
+        assert direction == ("COUNTER_CLOCKWISE" if label == "TROUGH" else "CLOCKWISE")
         centers[label] = center
     return centers
 
@@ -476,6 +523,17 @@ def main() -> int:
         raise RuntimeError("verify_font_mapping.py must not run with Python optimization enabled")
     root = ET.parse(WATCHFACE).getroot()
     assert hashlib.sha256(NOVA_MONO.read_bytes()).hexdigest() == NOVA_MONO_SHA256
+    assert_approved_session_ink_constants(CURRENT_TIME_INK, WORST_ENDPOINT_INK)
+    # Mutation checks make a reduced current or endpoint ink bound fail even if
+    # a later edit accidentally stops using one of the load-bearing constants.
+    for mutated_current, mutated_endpoint in (((65, 19), WORST_ENDPOINT_INK),
+                                              (CURRENT_TIME_INK, (65, 19))):
+        try:
+            assert_approved_session_ink_constants(mutated_current, mutated_endpoint)
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError("session ink-bound mutation survived")
     assert all(e.get("direction") in {"CLOCKWISE", "COUNTER_CLOCKWISE"} for e in root.iter() if e.get("direction"))
     clock_fonts = root.findall(".//DigitalClock//Font")
     assert len(clock_fonts) == 4 and all(f.attrib == {"color":"#fafafa", "size":"112", "family":"nova_mono", "weight":"NORMAL"} for f in clock_fonts)
@@ -500,6 +558,8 @@ def main() -> int:
     }
     assert len(session_fonts) == 7
     assert all(font is not None and font.get("letterSpacing") == "-0.05" for font in session_fonts)
+    assert all(font.get("color") == SESSION_FADED_COLOR for font in session_fonts
+               if font is not None and font.text in {"PEAK", "TRANSITION", "TROUGH", "PERSONAL", "SLEEP"})
 
     indicator = root.find(".//Scene/BooleanConfiguration[@id='secIndicator']/BooleanOption/PartDraw")
     assert indicator is not None and indicator.find("Variant").attrib == {"mode":"AMBIENT", "target":"alpha", "value":"0"}
@@ -552,6 +612,14 @@ def main() -> int:
         countdown["session_countdown_personal"],
         countdown["session_countdown_sleep"],
     ])
+    absurd_width = ET.fromstring(ET.tostring(countdown["session_countdown_hours"]))
+    absurd_width.set("width", "600")
+    try:
+        assert_session_part_containment(absurd_width)
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("absurd central PartText width survived")
     hours_template = countdown["session_countdown_hours"].find("Text/Font/Template").text
     minutes_template = countdown["session_countdown_minutes"].find("Text/Font/Template").text
     assert hours_template == "%sh"
@@ -568,9 +636,9 @@ def main() -> int:
     # Measured 158px row ink: centred rows are contained by the safe circle,
     # rather than by a vacuous full-width PartText raster check.
     assert [(float(p.get("y")) + (float(p.get("height")) - ink[1]) / 2,
-             float(p.get("y")) + (float(p.get("height")) + ink[1]) / 2)
-            for p, ink in ((countdown["session_countdown_hours"], HOURS_ROW_INK),
-                           (countdown["session_countdown_minutes"], MINUTES_ROW_INK))] == [(88, 206), (246.5, 363.5)]
+              float(p.get("y")) + (float(p.get("height")) + ink[1]) / 2)
+             for p, ink in ((countdown["session_countdown_hours"], HOURS_ROW_INK),
+                            (countdown["session_countdown_minutes"], MINUTES_ROW_INK))] == [(86, 204), (244.5, 361.5)]
     label_condition = next(
         (condition for condition in root.findall(".//Scene/Condition")
          if condition.find("Expressions/Expression[@name='isPeak']") is not None),
@@ -604,10 +672,10 @@ def main() -> int:
     assert default_part.find("Text/Font").text == "SLEEP"
     assert default_part.find("Text/Font/Template") is None
     # The 26px label's measured 19px ink is centred in the 40.5px row gap:
-    # y=224.5..243.5 leaves 18.5px below hours and 3px above minutes.
+    # y=222.5..241.5 leaves 18.5px below hours and exactly 3px above minutes.
     label_ink_top = float(default_part.get("y")) + (float(default_part.get("height")) - 19) / 2
-    assert label_ink_top - 206 == 18.5
-    assert 246.5 - (label_ink_top + 19) == 3
+    assert label_ink_top - 204 == 18.5
+    assert 244.5 - (label_ink_top + 19) == 3
     for name, label in (("session_countdown_peak", "PEAK"), ("session_countdown_transition", "TRANSITION"),
                         ("session_countdown_trough", "TROUGH"), ("session_countdown_personal", "PERSONAL"),
                         ("session_countdown_sleep", "SLEEP")):
@@ -634,7 +702,7 @@ def main() -> int:
     }
     transforms = {transform.get("target"): transform.get("value") for transform in arc_shape.findall("Transform")}
     assert set(transforms) == {"startAngle", "endAngle"}
-    assert arc_shape.find("Stroke").attrib == {"color": "#ffffff", "cap": "BUTT", "thickness": "3"}
+    assert arc_shape.find("Stroke").attrib == {"color": SESSION_FADED_COLOR, "cap": "BUTT", "thickness": "3"}
     arc_radius = float(arc_shape.get("width")) / 2
     arc_ink_radius = arc_radius + float(arc_shape.find("Stroke").get("thickness")) / 2
     assert arc_ink_radius == 216.5 <= FACE_RADIUS
@@ -642,8 +710,15 @@ def main() -> int:
     assert hashlib.sha256(MARKER.read_bytes()).hexdigest() == MARKER_SHA256
     marker_width, marker_height, marker_alpha = png_alpha(MARKER)
     assert (marker_width, marker_height) == (14, 12)
-    # The top-center apex is materially opaque, not transparent raster padding.
+    # The top-center apex is fully opaque; the hash-pinned authored silhouette
+    # also has partial-alpha fringe pixels at its outer reach.
     assert marker_alpha[0][7] == 255
+    marker_partial_reach = max(
+        math.hypot(225 - (218 + x), 225 - (8 + y))
+        for y, row in enumerate(marker_alpha) for x, alpha in enumerate(row)
+        if 0 < alpha < 255
+    )
+    assert marker_partial_reach > 217
     assert not (ROOT / "watchface/src/main/res/drawable/session_current_marker.xml").exists()
     # The only literal WFF image is the marker. It resolves to this transparent
     # raster. All other Image resources are the four schema-defined complication
@@ -661,37 +736,52 @@ def main() -> int:
     marker_image = marker.find("PartImage")
     assert marker_image is not None and marker_image.attrib == {"width": "14", "height": "12", "x": "218", "y": "8"}
     assert marker_image.find("Image").get("resource") == "session_current_marker"
-    # The marker's opaque apex is y=8 (r=217): 0.5px beyond the r=216.5 arc
-    # outer edge closes the observed corner gap while remaining 8px inside r225.
+    # Its fully opaque apex is y=8 (r=217): 0.5px beyond the r=216.5 arc outer
+    # edge. Partial-alpha fringe reaches farther, stays in the approved circle,
+    # and remains pinned by the PNG hash above.
     assert FACE_RADIUS - float(marker_image.get("y")) == 217 <= SESSION_SAFE_INK_RADIUS < FACE_RADIUS
+    assert marker_partial_reach <= SESSION_SAFE_INK_RADIUS
     assert arc_ink_radius < FACE_RADIUS - float(marker_image.get("y")) <= arc_ink_radius + 0.5
     assert marker.find("Transform").get("value") == transforms["startAngle"]
     marker_variant = marker.find("Variant")
     assert marker_variant is not None and marker_variant.get("value") == "[CONFIGURATION.aod] == 3 ? 255 : 0"
-    current = furnishings["session_current_time"]
-    current_text = current.find("TextCircular")
-    assert current_text is not None and parameters(current_text) == ['icuText("HH:mm", [UTC_TIMESTAMP])']
-    current_transforms = {t.get("target"): t.get("value") for t in current_text.findall("Transform")}
-    assert current_text.attrib == {"centerX": "225", "centerY": "225", "width": "408", "height": "408", "startAngle": "0", "endAngle": "24", "direction": "CLOCKWISE", "align": "CENTER"}
-    assert set(current_transforms) == {"startAngle", "endAngle"}
-    assert current_text.find("Font").attrib == {"color": "#ffffff", "family": "nova_mono", "size": "24", "weight": "NORMAL", "letterSpacing": "-0.05"}
-    # Measured `00:00` current ink is 64×17. The independently measured worst
-    # endpoint (`17:00`) is 63×19. Current r204 is
-    # outside endpoints r195 but inside the arc's inner r213.5 edge; its 24°
+    current_condition = arc_condition.find("Compare/Condition")
+    assert current_condition is not None
+    current_lower_expression = current_condition.find("Expressions/Expression[@name='sessionCurrentLower']")
+    assert current_lower_expression is not None and current_lower_expression.text == "[HOUR_0_11] * 30 + [MINUTE] * 0.5 >= 109 && [HOUR_0_11] * 30 + [MINUTE] * 0.5 <= 289"
+    current_parts = {
+        "lower": current_condition.find("Compare[@expression='sessionCurrentLower']/PartText"),
+        "upper": current_condition.find("Default/PartText"),
+    }
+    assert {key: part.get("name") for key, part in current_parts.items()} == {
+        "lower": "session_current_time_lower", "upper": "session_current_time_upper"}
+    assert all(part.get("alpha") == "0" and part.find("Variant").get("value") == "[CONFIGURATION.aod] == 3 ? 255 : 0"
+               for part in current_parts.values())
+    current_texts = {key: part.find("TextCircular") for key, part in current_parts.items()}
+    assert all(text is not None and parameters(text) == ['icuText("HH:mm", [UTC_TIMESTAMP])'] for text in current_texts.values())
+    assert {key: text.get("direction") for key, text in current_texts.items()} == {"upper": "CLOCKWISE", "lower": "COUNTER_CLOCKWISE"}
+    for text in current_texts.values():
+        assert {key: text.get(key) for key in ("centerX", "centerY", "width", "height", "startAngle", "endAngle", "align")} == {"centerX": "225", "centerY": "225", "width": "406", "height": "406", "startAngle": "0", "endAngle": "0", "align": "CENTER"}
+        assert set(t.get("target") for t in text.findall("Transform")) == {"startAngle", "endAngle"}
+        assert text.find("Font").attrib == {"color": "#ffffff", "family": "nova_mono", "size": "24", "weight": "NORMAL", "letterSpacing": "-0.05"}
+    # Current r203 is
+    # outside endpoints r195 but inside the arc's inner r213.5 edge; its 22°
     # path gives glyph fit beyond letter spacing alone.
     central_ink_radius = max(
-        radius_for_box(125, 225 - 88.5), radius_for_box(125, 363.5 - 225),
-        radius_for_box(74.5, 393 - 225),
+        radius_for_box(127, 225 - 86.5), radius_for_box(127, 361.5 - 225),
+        radius_for_box(76.5, 391 - 225),
     )
-    current_radius, endpoint_radius = 204, 195
-    current_half_diagonal = math.hypot(CURRENT_TIME_INK[0] / 2, CURRENT_TIME_INK[1] / 2)
-    endpoint_half_diagonal = math.hypot(WORST_ENDPOINT_INK[0] / 2, WORST_ENDPOINT_INK[1] / 2)
-    assert current_radius + 8.5 < arc_radius - 1.5
+    current_radius, endpoint_radius = 203, 195
+    # The approved 66x19 ink envelope has a 9.5px radial half-height, leaving exactly 1px
+    # before the arc's 213.5px inner ink edge; the path is therefore not used
+    # as a proxy for a collision-free painted bound.
+    assert current_radius + CURRENT_TIME_INK[1] / 2 < arc_radius - 1.5
     end_labels = {part.get("name"): part for part in arc_condition.findall(".//PartText") if (part.get("name") or "").startswith("session_end_")}
     assert {name: part.find("TextCircular/Font").text for name, part in end_labels.items()} == {"session_end_peak": "11:00", "session_end_transition": "12:00", "session_end_trough": "17:00", "session_end_personal": "22:00"}
     assert all(part.find("TextCircular/Font/Template") is None for part in end_labels.values())
     assert all(part.find("TextCircular").get("width") == "390" for part in end_labels.values())
     assert all(part.find("TextCircular/Font").get("size") == "24" for part in end_labels.values())
+    assert all(part.find("TextCircular/Font").get("color") == SESSION_FADED_COLOR for part in end_labels.values())
     # Derive each label path from XML, then compare its center and clockwise
     # span to the independent endpoint-placement specification.  Checking both
     # catches a mutation to either source angle for every endpoint label.
@@ -702,7 +792,6 @@ def main() -> int:
         "PERSONAL": end_labels["session_end_personal"].find("TextCircular"),
     }
     assert all(path is not None for path in endpoint_paths.values())
-    assert all(path.get("direction") == "CLOCKWISE" for path in endpoint_paths.values())
     endpoint_centers = endpoint_label_geometry(endpoint_paths)
     # Mutation-test every source endpoint in memory.  This proves that the
     # extraction above, rather than a duplicated fixed center, rejects either
@@ -723,7 +812,11 @@ def main() -> int:
     # verified by Euclidean distance at every rendered current-time position;
     # neither label relies on letter spacing or a radial-only fit claim.
     assert all(part.find("Variant").get("value") == "[CONFIGURATION.aod] == 3 ? 255 : 0" for part in end_labels.values())
-    endpoint_condition = arc_condition.find("Compare/Condition")
+    endpoint_condition = next(
+        (condition for condition in arc_condition.findall("Compare/Condition")
+         if condition.find("Expressions/Expression[@name='sessionEndPeak']") is not None),
+        None,
+    )
     assert endpoint_condition is not None
     endpoint_expressions = {e.get("name"): e.text for e in endpoint_condition.findall("Expressions/Expression")}
     assert endpoint_expressions == {
@@ -759,6 +852,8 @@ def main() -> int:
     # independent schedule. This kills threshold/end/operator/floor/modulo and
     # zero-padding mutations, rather than merely comparing expression text.
     previous_current_center: float | None = None
+    minimum_sat_clearance = math.inf
+    minimum_sat_at: tuple[int, int, str] | None = None
     for hour in range(24):
         for minute in range(60):
             expected_hours, expected_minutes, expected_label, expected_end = specified_session(hour, minute)
@@ -779,46 +874,78 @@ def main() -> int:
                 assert evaluate_wff(transforms["endAngle"], hour, minute) == expected_end, (hour, minute, "endAngle")
                 start_angle = evaluate_wff(transforms["startAngle"], hour, minute)
                 assert start_angle == (hour % 12) * 30 + minute * 0.5
+                lower = bool(evaluate_wff(current_lower_expression.text, hour, minute))
+                current_text = current_texts["lower" if lower else "upper"]
+                current_transforms = {t.get("target"): t.get("value") for t in current_text.findall("Transform")}
+                upper_transforms = {t.get("target"): t.get("value") for t in current_texts["upper"].findall("Transform")}
+                lower_transforms = {t.get("target"): t.get("value") for t in current_texts["lower"].findall("Transform")}
+                # Direction cannot be transformed: both structural branches must
+                # nevertheless describe exactly the same normalized physical arc.
+                upper_path = {evaluate_wff(value, hour, minute) for value in upper_transforms.values()}
+                lower_path = {evaluate_wff(value, hour, minute) for value in lower_transforms.values()}
+                assert upper_path == lower_path and len(upper_path) == 2
                 current_start = evaluate_wff(current_transforms["startAngle"], hour, minute)
                 current_end = evaluate_wff(current_transforms["endAngle"], hour, minute)
                 # Every current-time path angle is explicitly normalized, rather
                 # than depending on renderer treatment of negative or >360°.
                 assert 0 <= current_start <= 360 and 0 <= current_end <= 360
-                assert (current_end - current_start) % 360 == 24
-                current_center = (current_start + 12) % 360
+                span = ((current_end - current_start) if not lower else (current_start - current_end)) % 360
+                assert span == CURRENT_PATH_SPAN
+                current_center = ((current_start + CURRENT_PATH_SPAN / 2) if not lower else (current_start - CURRENT_PATH_SPAN / 2)) % 360
                 trail = (start_angle - current_center) % 360
-                # This deliberately has no session-aware branch: all 960
-                # non-SLEEP minutes place the label at the same 20° trail.
-                assert trail == 20
+                assert trail == CURRENT_TRAIL
+                # The source predicate is expressed in hand angle: subtracting
+                # the 19° trail puts the label centre in lower 90°..270°.
+                assert lower == (109 <= start_angle <= 289)
+                # Upper clockwise faces glyph tops outward; lower counter-
+                # clockwise faces them inward. These are the only directions
+                # permitted by the structural hemisphere branch.
+                assert current_text.get("direction") == ("COUNTER_CLOCKWISE" if lower else "CLOCKWISE")
                 if previous_current_center is not None:
                     # Consecutive non-SLEEP minutes advance by 0.5° even at
                     # normalized noon wrap: no geometry branch can teleport it.
                     assert (current_center - previous_current_center) % 360 == 0.5
                 previous_current_center = current_center
-                assert 2 * current_radius * math.sin(math.radians((trail - 12) / 2)) > 14
+                marker_path_clearance = 2 * current_radius * math.sin(
+                    math.radians((trail - CURRENT_PATH_SPAN / 2) / 2)
+                )
+                assert marker_path_clearance > MARKER_TO_CURRENT_PATH_CLEARANCE
+                # Current sits behind the marker: its leading path edge stops
+                # 8° before the arc begins, whose clockwise sweep continues to
+                # the session endpoint. This is checked at all 960 minutes.
+                current_leading_edge = (current_center + CURRENT_PATH_SPAN / 2) % 360
+                arc_sweep = (expected_end - start_angle) % 360
+                assert (start_angle - current_leading_edge) % 360 == CURRENT_TRAIL - CURRENT_PATH_SPAN / 2
+                assert 0 < arc_sweep < 360
+                assert not (0 <= (current_leading_edge - start_angle) % 360 <= arc_sweep)
                 endpoint_angle = endpoint_centers[expected_label]
-                # At the final half-degree session minute the 20° trail is
-                # still radially separated. Bounding both measured ink boxes
-                # by their half diagonals proves no endpoint overlap.
                 endpoint_separation = angle_distance(current_center, endpoint_angle)
                 separation = math.sqrt(
                     current_radius ** 2 + endpoint_radius ** 2
                     - 2 * current_radius * endpoint_radius
                     * math.cos(math.radians(endpoint_separation))
                 )
-                assert separation > current_half_diagonal + endpoint_half_diagonal
+                current_box = oriented_text_box(current_radius, current_center, *CURRENT_TIME_INK)
+                endpoint_box = oriented_text_box(endpoint_radius, endpoint_angle, *WORST_ENDPOINT_INK)
+                # Actual oriented measured ink boxes, rather than a weakened
+                # centre-distance proxy, must have positive SAT clearance.
+                sat_clearance = oriented_box_clearance(current_box, endpoint_box)
+                if sat_clearance < minimum_sat_clearance:
+                    minimum_sat_clearance = sat_clearance
+                    minimum_sat_at = (hour, minute, expected_label)
+                assert sat_clearance > 0, (hour, minute, separation)
                 # The central ink's conservative outer radius is below the
                 # current path's r195.5 inner edge, so it cannot overlap the
                 # circular current annotation at any angle.
                 assert central_ink_radius < current_radius - 8.5
                 # Endpoints are fixed at session boundaries, so prove their
-                # measured 63×19px tangent boxes avoid both independently
+                # approved 66×19px tangent boxes avoid both independently
                 # measured rows and the widest 26px label at every selection.
                 endpoint_box = circular_text_bounds(endpoint_radius, endpoint_angle, *WORST_ENDPOINT_INK)
                 central_boxes = (
-                    (103.5, 88, 346.5, 206),     # 00h: 243×118
-                    (100, 246.5, 350, 363.5),   # 00m: 250×117
-                    (150.5, 224.5, 299.5, 243.5),  # TRANSITION: 149×19
+                    (105.5, 86, 348.5, 204),     # 00h: 243×118, +2/-2
+                    (102, 244.5, 352, 361.5),    # 00m: 250×117, +2/-2
+                    (152.5, 222.5, 301.5, 241.5),  # TRANSITION: 149×19, +2/-2
                 )
                 assert all(boxes_disjoint(endpoint_box, box) for box in central_boxes), (hour, minute, endpoint_box)
                 expected_end_part = {"PEAK": "session_end_peak", "TRANSITION": "session_end_transition", "TROUGH": "session_end_trough", "PERSONAL": "session_end_personal"}[expected_label]
@@ -849,6 +976,8 @@ def main() -> int:
     assert evaluate_wff("-([MINUTE] + 1)", 0, 4) == -5
     assert evaluate_wff('numberFormat("00", 2)', 0, 0) == "02"
     assert evaluate_wff('numberFormat("00", 30)', 0, 0) == "30"
+
+    assert minimum_sat_at is not None
 
     slot = slots["3"]
     shape = slot.find("BoundingArc")
@@ -954,7 +1083,12 @@ def main() -> int:
         assert slot4_radius - slot4_half_thickness <= text_radius - 13
         assert text_radius + 13 <= slot4_radius + slot4_half_thickness
         path_bounds(part, text)
-    print("Nova Mono, safe adaptive arc, hour animation, AOD session countdown, and safety invariants verified")
+    print(
+        "Nova Mono, safe adaptive arc, hour animation, AOD session countdown, and safety invariants verified; "
+        f"minimum current/endpoint SAT clearance={minimum_sat_clearance:.6f}px at "
+        f"{minimum_sat_at[0]:02d}:{minimum_sat_at[1]:02d} {minimum_sat_at[2]}; "
+        f"marker/current-path clearance={marker_path_clearance:.6f}px"
+    )
     return 0
 
 
