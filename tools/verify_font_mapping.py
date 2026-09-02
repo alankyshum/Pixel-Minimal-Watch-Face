@@ -33,7 +33,7 @@ MINUTES_ROW_INK = (250, 117)     # `00m` at 158px
 # Do not substitute synthetic SEMI_BOLD: the bundled file is Regular (OS/2 400).
 CURRENT_TIME_INK = (66, 19)
 WORST_ENDPOINT_INK = (66, 19)
-SESSION_FADED_COLOR = "#888888"
+SESSION_FADED_COLOR = "#cccccc"
 SESSION_OPTICAL_OFFSET = (2.0, -2.0)
 CURRENT_TRAIL = 19.0
 CURRENT_PATH_SPAN = 22.0
@@ -405,6 +405,12 @@ def assert_approved_session_ink_constants(current: tuple[int, int], endpoint: tu
     assert endpoint == (66, 19), endpoint
 
 
+def assert_approved_session_faded_color(color: str) -> None:
+    """Pin the specified 1.5× #888888 annotation color below white ink."""
+    assert color == "#cccccc", color
+    assert all(channel < 0xff for channel in bytes.fromhex(color[1:])), color
+
+
 def assert_session_countdown_centering(parts: list[ET.Element]) -> None:
     """All seven central rasters share the specified +2px/-2px optical shift."""
     assert len(parts) == 7
@@ -524,6 +530,7 @@ def main() -> int:
     root = ET.parse(WATCHFACE).getroot()
     assert hashlib.sha256(NOVA_MONO.read_bytes()).hexdigest() == NOVA_MONO_SHA256
     assert_approved_session_ink_constants(CURRENT_TIME_INK, WORST_ENDPOINT_INK)
+    assert_approved_session_faded_color(SESSION_FADED_COLOR)
     # Mutation checks make a reduced current or endpoint ink bound fail even if
     # a later edit accidentally stops using one of the load-bearing constants.
     for mutated_current, mutated_endpoint in (((65, 19), WORST_ENDPOINT_INK),
@@ -534,6 +541,13 @@ def main() -> int:
             pass
         else:
             raise AssertionError("session ink-bound mutation survived")
+    for mutated_color in ("#cdcdcd", "#ffffff"):
+        try:
+            assert_approved_session_faded_color(mutated_color)
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError("session faded-color mutation survived")
     assert all(e.get("direction") in {"CLOCKWISE", "COUNTER_CLOCKWISE"} for e in root.iter() if e.get("direction"))
     clock_fonts = root.findall(".//DigitalClock//Font")
     assert len(clock_fonts) == 4 and all(f.attrib == {"color":"#fafafa", "size":"112", "family":"nova_mono", "weight":"NORMAL"} for f in clock_fonts)
