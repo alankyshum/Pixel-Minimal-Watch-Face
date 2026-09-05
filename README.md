@@ -25,6 +25,14 @@ Slots remain configurable in the Wear OS complication editor. Phone Battery Comp
 
 ## Build and personal use
 
+Session Countdown is generated from `config/watchface-sessions.json`. Edit the
+`sessions` array (each item has a `name` plus either a minute `duration` or
+`start`/`end` in `HH:MM`), then run `bash ./gradlew :watchface:assembleDebug`.
+The build validates JSON, names, hour-boundary times/durations, contiguous
+coverage, and full-day coverage before Android resource processing and
+regenerates `watchface.xml` (the WFF schedule expressions expose hours, not
+minute thresholds).
+
 1. Open the project in Android Studio with an installed Wear OS SDK, or run `bash ./gradlew :watchface:assembleDebug`.
 2. Install the resulting debug APK to a compatible Wear OS 5+ watch using Android Studio or `adb` for your own personal use. The hardware serial is the value from `adb -s "$selector" shell getprop ro.serialno`; the ADB selector is the first column of `adb devices -l` (it may be an mDNS transport name) and is the value passed to `adb -s`. Replace the placeholder below with the hardware serial; it finds exactly one connected `device` selector before building and installing:
 
@@ -71,7 +79,7 @@ Adds an independent second top circular text complication (slot 4). Its `LONG_TE
 
 ## Configuration inventory
 
-This section is generated from `watchface.xml` and `strings.xml`. Do not edit it manually: run `python3 tools/generate_readme_config.py` after changing watch-face configuration resources. CI and the repository hook use `--check` to reject stale content.
+This section is generated from the static `watchface/src/main/watchface-template.xml` and `strings.xml`; it does not require generated build output. Do not edit it manually. CI and the repository hook use `--check` to reject stale content.
 
 <!-- BEGIN GENERATED CONFIGURATION INVENTORY -->
 
@@ -131,7 +139,7 @@ tools/validate_wff_v2.sh
 
 The tracked pre-commit hook runs the README `--check` command, static font/geometry verifier, and the portable official WFF v2 validation command. The latter caches a checksum-pinned source archive under `${XDG_CACHE_HOME:-$HOME/.cache}`; before executing it validates the archive, pinned validator build source, and validator JAR digests, so a verified cache does not force network access. It needs `curl`, `tar`, a POSIX shell, and Java 17 only when rebuilding/downloading. It is intentionally activated only after the explicit local `core.hooksPath` command above.
 
-The validator source is Google’s Apache-2.0 [watchface repository](https://github.com/google/watchface), commit `44b1855d445686ac8de5dbc95003d6f8e6623643`; the downloaded codeload archive must match SHA-256 `d32b020cd7130b0d5d0a576878b452785b46c1c614642f4af55a937ef551ed4d`. It builds the repository’s documented `:specification:validator:executable-jar` target and invokes `java -jar wff-validator.jar 2 watchface/src/main/res/raw/watchface.xml`. This is a portable replacement for the reviewer-session schema-tree path; `xmllint` cannot compile the official schema because its XSD 1.0 implementation rejects the schema’s repeated members in `xs:all`.
+The validator source is Google’s Apache-2.0 [watchface repository](https://github.com/google/watchface), commit `44b1855d445686ac8de5dbc95003d6f8e6623643`; the downloaded codeload archive must match SHA-256 `d32b020cd7130b0d5d0a576878b452785b46c1c614642f4af55a937ef551ed4d`. It builds the repository’s documented `:specification:validator:executable-jar` target and invokes `java -jar wff-validator.jar 2 watchface/build/generated/session-res/raw/watchface.xml`. This is a portable replacement for the reviewer-session schema-tree path; `xmllint` cannot compile the official schema because its XSD 1.0 implementation rejects the schema’s repeated members in `xs:all`.
 
 ## Permission, licensing, and publication status
 

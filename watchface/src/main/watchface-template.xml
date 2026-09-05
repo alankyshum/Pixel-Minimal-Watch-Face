@@ -838,7 +838,7 @@
                     <Arc centerX="225" centerY="225" width="430" height="430" startAngle="0" endAngle="0" direction="CLOCKWISE">
                         <Transform target="startAngle" value="[HOUR_0_11] * 30 + [MINUTE] * 0.5"/>
                         <!-- 180 is normalized: wrapped CLOCKWISE arc semantics supply the overnight sweep. -->
-                        <Transform target="endAngle" value="[HOUR_0_23] >= 22 || !([HOUR_0_23] >= 6) ? 180 : ([HOUR_0_23] >= 6 &amp;&amp; !([HOUR_0_23] >= 11) ? 330 : ([HOUR_0_23] >= 11 &amp;&amp; !([HOUR_0_23] >= 12) ? 360 : ([HOUR_0_23] >= 12 &amp;&amp; !([HOUR_0_23] >= 17) ? 150 : 300)))"/>
+                        <Transform target="endAngle" value="([HOUR_0_23] >= 0 &amp;&amp; !([HOUR_0_23] >= 6) ? 180 : ([HOUR_0_23] >= 6 &amp;&amp; !([HOUR_0_23] >= 11) ? 330 : ([HOUR_0_23] >= 11 &amp;&amp; !([HOUR_0_23] >= 12) ? 360 : ([HOUR_0_23] >= 12 &amp;&amp; !([HOUR_0_23] >= 17) ? 150 : ([HOUR_0_23] >= 17 &amp;&amp; !([HOUR_0_23] >= 22) ? 300 : 180)))))"/>
                         <Stroke color="#cccccc" cap="BUTT" thickness="3"/>
                     </Arc>
                 </PartDraw>
@@ -875,25 +875,26 @@
         </Condition>
         <PartText name="session_countdown_hours" width="450" height="158" x="4" y="64" alpha="0">
             <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0" />
-            <Text align="CENTER"><Font color="#ffffff" family="nova_mono" size="158" weight="NORMAL" letterSpacing="-0.05"><Template>%sh<Parameter expression="numberFormat(&quot;00&quot;, floor((([HOUR_0_23] >= 6 &amp;&amp; !([HOUR_0_23] >= 11) ? 660 : ([HOUR_0_23] >= 11 &amp;&amp; !([HOUR_0_23] >= 12) ? 720 : ([HOUR_0_23] >= 12 &amp;&amp; !([HOUR_0_23] >= 17) ? 1020 : ([HOUR_0_23] >= 17 &amp;&amp; !([HOUR_0_23] >= 22) ? 1320 : ([HOUR_0_23] >= 22 ? 1800 : 360))))) - ([HOUR_0_23] * 60 + [MINUTE])) / 60))"/></Template></Font></Text>
+            <Text align="CENTER"><Font color="#ffffff" family="nova_mono" size="158" weight="NORMAL" letterSpacing="-0.05"><Template>%sh<Parameter expression="numberFormat(&quot;00&quot;, floor((([HOUR_0_23] >= 0 &amp;&amp; !([HOUR_0_23] >= 6) ? 360 : ([HOUR_0_23] >= 6 &amp;&amp; !([HOUR_0_23] >= 11) ? 660 : ([HOUR_0_23] >= 11 &amp;&amp; !([HOUR_0_23] >= 12) ? 720 : ([HOUR_0_23] >= 12 &amp;&amp; !([HOUR_0_23] >= 17) ? 1020 : ([HOUR_0_23] >= 17 &amp;&amp; !([HOUR_0_23] >= 22) ? 1320 : 1800))))) - ([HOUR_0_23] * 60 + [MINUTE])) / 60))"/></Template></Font></Text>
         </PartText>
         <PartText name="session_countdown_minutes" width="450" height="158" x="4" y="222" alpha="0">
             <Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0" />
-            <Text align="CENTER"><Font color="#ffffff" family="nova_mono" size="158" weight="NORMAL" letterSpacing="-0.05"><Template>%sm<Parameter expression="numberFormat(&quot;00&quot;, floor((([HOUR_0_23] >= 6 &amp;&amp; !([HOUR_0_23] >= 11) ? 660 : ([HOUR_0_23] >= 11 &amp;&amp; !([HOUR_0_23] >= 12) ? 720 : ([HOUR_0_23] >= 12 &amp;&amp; !([HOUR_0_23] >= 17) ? 1020 : ([HOUR_0_23] >= 17 &amp;&amp; !([HOUR_0_23] >= 22) ? 1320 : ([HOUR_0_23] >= 22 ? 1800 : 360))))) - ([HOUR_0_23] * 60 + [MINUTE])) % 60))"/></Template></Font></Text>
+            <Text align="CENTER"><Font color="#ffffff" family="nova_mono" size="158" weight="NORMAL" letterSpacing="-0.05"><Template>%sm<Parameter expression="numberFormat(&quot;00&quot;, floor((([HOUR_0_23] >= 0 &amp;&amp; !([HOUR_0_23] >= 6) ? 360 : ([HOUR_0_23] >= 6 &amp;&amp; !([HOUR_0_23] >= 11) ? 660 : ([HOUR_0_23] >= 11 &amp;&amp; !([HOUR_0_23] >= 12) ? 720 : ([HOUR_0_23] >= 12 &amp;&amp; !([HOUR_0_23] >= 17) ? 1020 : ([HOUR_0_23] >= 17 &amp;&amp; !([HOUR_0_23] >= 22) ? 1320 : 1800))))) - ([HOUR_0_23] * 60 + [MINUTE])) % 60))"/></Template></Font></Text>
         </PartText>
         <!-- Condition owns time-varying label selection; Variant only gates AOD mode. -->
         <Condition>
             <Expressions>
-                <Expression name="isPeak"><![CDATA[[HOUR_0_23] >= 6 && !([HOUR_0_23] >= 11)]]></Expression>
-                <Expression name="isTransition"><![CDATA[[HOUR_0_23] >= 11 && !([HOUR_0_23] >= 12)]]></Expression>
-                <Expression name="isTrough"><![CDATA[[HOUR_0_23] >= 12 && !([HOUR_0_23] >= 17)]]></Expression>
-                <Expression name="isPersonal"><![CDATA[[HOUR_0_23] >= 17 && !([HOUR_0_23] >= 22)]]></Expression>
-            </Expressions>
-            <Compare expression="isPeak"><PartText name="session_countdown_peak" width="450" height="26" x="4" y="217" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#cccccc" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">PEAK</Font></Text></PartText></Compare>
-            <Compare expression="isTransition"><PartText name="session_countdown_transition" width="450" height="26" x="4" y="217" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#cccccc" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">TRANSITION</Font></Text></PartText></Compare>
-            <Compare expression="isTrough"><PartText name="session_countdown_trough" width="450" height="26" x="4" y="217" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#cccccc" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">TROUGH</Font></Text></PartText></Compare>
-            <Compare expression="isPersonal"><PartText name="session_countdown_personal" width="450" height="26" x="4" y="217" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#cccccc" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">PERSONAL</Font></Text></PartText></Compare>
-            <Default><PartText name="session_countdown_sleep" width="450" height="26" x="4" y="217" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#cccccc" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">SLEEP</Font></Text></PartText></Default>
+                <Expression name="is_s0_sleep"><![CDATA[[HOUR_0_23] >= 0 && !([HOUR_0_23] >= 6)]]></Expression>
+                <Expression name="is_s1_peak"><![CDATA[[HOUR_0_23] >= 6 && !([HOUR_0_23] >= 11)]]></Expression>
+                <Expression name="is_s2_transition"><![CDATA[[HOUR_0_23] >= 11 && !([HOUR_0_23] >= 12)]]></Expression>
+                <Expression name="is_s3_trough"><![CDATA[[HOUR_0_23] >= 12 && !([HOUR_0_23] >= 17)]]></Expression>
+                <Expression name="is_s4_personal"><![CDATA[[HOUR_0_23] >= 17 && !([HOUR_0_23] >= 22)]]></Expression>
+            </Expressions><Compare expression="is_s0_sleep"><PartText name="session_countdown_s0_sleep" width="450" height="26" x="4" y="217" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#cccccc" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">SLEEP</Font></Text></PartText></Compare>
+            <Compare expression="is_s1_peak"><PartText name="session_countdown_s1_peak" width="450" height="26" x="4" y="217" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#cccccc" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">PEAK</Font></Text></PartText></Compare>
+            <Compare expression="is_s2_transition"><PartText name="session_countdown_s2_transition" width="450" height="26" x="4" y="217" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#cccccc" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">TRANSITION</Font></Text></PartText></Compare>
+            <Compare expression="is_s3_trough"><PartText name="session_countdown_s3_trough" width="450" height="26" x="4" y="217" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#cccccc" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">TROUGH</Font></Text></PartText></Compare>
+            <Compare expression="is_s4_personal"><PartText name="session_countdown_s4_personal" width="450" height="26" x="4" y="217" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#cccccc" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">PERSONAL</Font></Text></PartText></Compare>
+            <Default><PartText name="session_countdown_s5_sleep" width="450" height="26" x="4" y="217" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#cccccc" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">SLEEP</Font></Text></PartText></Default>
         </Condition>
     </Scene>
 </WatchFace>

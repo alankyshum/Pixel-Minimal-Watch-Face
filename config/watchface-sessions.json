@@ -1,0 +1,10 @@
+{
+  "sessions": [
+    {"name": "SLEEP", "start": "00:00", "end": "06:00"},
+    {"name": "PEAK", "duration": 300},
+    {"name": "TRANSITION", "duration": 60},
+    {"name": "TROUGH", "duration": 300},
+    {"name": "PERSONAL", "duration": 300},
+    {"name": "SLEEP", "duration": 120}
+  ]
+}

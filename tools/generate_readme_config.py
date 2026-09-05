@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
-WATCHFACE = ROOT / "watchface/src/main/res/raw/watchface.xml"
+WATCHFACE = ROOT / "watchface/src/main/watchface-template.xml"
 STRINGS = ROOT / "watchface/src/main/res/values/strings.xml"
 BEGIN = "<!-- BEGIN GENERATED CONFIGURATION INVENTORY -->"
 END = "<!-- END GENERATED CONFIGURATION INVENTORY -->"

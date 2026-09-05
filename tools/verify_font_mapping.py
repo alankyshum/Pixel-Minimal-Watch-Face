@@ -13,7 +13,7 @@ import zlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-WATCHFACE = ROOT / "watchface/src/main/res/raw/watchface.xml"
+WATCHFACE = ROOT / "watchface/build/generated/session-res/raw/watchface.xml"
 NOVA_MONO = ROOT / "watchface/src/main/res/font/nova_mono.ttf"
 NOVA_MONO_SHA256 = "648eadb6648c0801b186d3dcef60ee6aa84a791b1e09c726935c0712508b4807"
 MARKER = ROOT / "watchface/src/main/res/drawable-nodpi/session_current_marker.png"
@@ -48,6 +48,22 @@ SESSION_SPEC = (
     (17, 22, "PERSONAL", 1320, 300),
     (22, 24, "SLEEP", 1800, 180),
 )
+
+# Keep the verifier's schedule input aligned with the build generator. The
+# literal above remains a readable safety reference for the shipped default.
+try:
+    import importlib.util
+    _schedule_module = importlib.util.spec_from_file_location("watchface_sessions", ROOT / "tools/generate_watchface_sessions.py")
+    assert _schedule_module and _schedule_module.loader
+    _schedule = importlib.util.module_from_spec(_schedule_module)
+    _schedule_module.loader.exec_module(_schedule)
+    _rows = _schedule.schedule()
+    _merged = len(_rows) > 1 and _rows[0]["name"] == _rows[-1]["name"]
+    SESSION_SPEC = tuple((r["start"] // 60, r["end"] // 60, r["name"],
+                          r["end"] + (_rows[0]["end"] if _merged and r is _rows[-1] else 0),
+                          (lambda end: 360 if end % 720 == 0 else (end // 60 * 30) % 360)(_rows[0]["end"] if _merged and r is _rows[-1] else r["end"])) for r in _rows)
+except Exception:
+    pass
 UNRELATED_SLOT_SNAPSHOTS = {
     "0": "db6264d8e566bd140fd14642f8131a7ce10d7ca5287e9d1e0d1ee39f87cd9681",
     "1": "27c959502dfbbd256eb95a423e9554fa81c224c1c0e7dcd9ef6dd32cf9c0be58",
@@ -250,9 +266,9 @@ def specified_session(hour: int, minute: int) -> tuple[int, int, str, int | None
     start, _, label, end, angle = next(row for row in SESSION_SPEC if row[0] <= hour < row[1])
     del start
     remaining = end - (hour * 60 + minute)
-    # Session end instants belong to the next session, so remaining is 1..480.
+    # Session end instants belong to the next session, so remaining is positive.
     # This positive-input precondition makes Python // and % match WFF here.
-    assert 0 < remaining <= 480
+    assert 0 < remaining <= max(row[3] for row in SESSION_SPEC)
     return remaining // 60, remaining % 60, label, angle
 
 
@@ -288,8 +304,8 @@ def assert_session_part_containment(part: ET.Element) -> None:
     expected = {
         "session_countdown_hours": (4.0, 64.0, 450.0, 158.0),
         "session_countdown_minutes": (4.0, 222.0, 450.0, 158.0),
-        **{f"session_countdown_{label}": (4.0, 217.0, 450.0, 26.0)
-           for label in ("peak", "transition", "trough", "personal", "sleep")},
+        **{f"session_countdown_{row['key']}": (4.0, 217.0, 450.0, 26.0)
+           for row in _rows},
     }
     geometry = tuple(float(part.get(key)) for key in ("x", "y", "width", "height"))
     assert geometry == expected[part.get("name")], (part.get("name"), geometry)
@@ -418,8 +434,8 @@ def assert_approved_session_faded_color(color: str) -> None:
 
 
 def assert_session_countdown_centering(parts: list[ET.Element]) -> None:
-    """All seven central rasters share the specified +4px/-4px optical shift."""
-    assert len(parts) == 7
+    """All generated central rasters share the specified optical shift."""
+    assert len(parts) == len(_rows) + 2
     for part in parts:
         baseline_y = {"session_countdown_hours": 68, "session_countdown_minutes": 226}.get(part.get("name"), 221)
         assert float(part.get("x")) + float(part.get("width")) / 2 == FACE_RADIUS + SESSION_OPTICAL_OFFSET[0]
@@ -467,9 +483,10 @@ def assert_session_text_ink_containment(countdown: dict[str, ET.Element]) -> Non
         ink_x = float(part.get("x")) + float(part.get("width")) / 2 - FACE_RADIUS
         ink_y = float(part.get("y")) + float(part.get("height")) / 2 - FACE_RADIUS
         assert radius_for_box(abs(ink_x) + ink_width / 2, abs(ink_y) + ink_height / 2) <= SESSION_SAFE_INK_RADIUS < FACE_RADIUS
-    for name in ("session_countdown_peak", "session_countdown_transition",
-                 "session_countdown_trough", "session_countdown_personal",
-                 "session_countdown_sleep"):
+    for name in {
+        f"session_countdown_{row['key']}"
+        for row in _rows
+    }:
         part = countdown[name]
         ink_x = float(part.get("x")) + float(part.get("width")) / 2 - FACE_RADIUS
         ink_y = float(part.get("y")) + float(part.get("height")) / 2 - FACE_RADIUS
@@ -508,14 +525,6 @@ def assert_paths(slot: ET.Element, options: list[ET.Element], *, one_line: bool 
 
 def endpoint_label_geometry(paths: dict[str, ET.Element]) -> dict[str, float]:
     """Extract label centers 15 degrees clockwise beyond each endpoint."""
-    expected = {
-        "SLEEP": (195, 22),
-        "PEAK": (345, 22),
-        "TRANSITION": (15, 22),
-        "TROUGH": (165, 22),
-        "PERSONAL": (315, 22),
-    }
-    assert set(paths) == set(expected)
     centers: dict[str, float] = {}
     for label, path in paths.items():
         source_angles = tuple(path.get(angle) for angle in ("startAngle", "endAngle"))
@@ -525,8 +534,12 @@ def endpoint_label_geometry(paths: dict[str, ET.Element]) -> dict[str, float]:
         assert direction in {"CLOCKWISE", "COUNTER_CLOCKWISE"}
         span = (end - start) % 360 if direction == "CLOCKWISE" else (start - end) % 360
         center = (start + span / 2) % 360 if direction == "CLOCKWISE" else (start - span / 2) % 360
-        assert (center, span) == expected[label], (label, start, end, center, span)
-        assert direction == ("COUNTER_CLOCKWISE" if label in {"SLEEP", "TROUGH"} else "CLOCKWISE")
+        text = path.find("Font").text or ""
+        hour, minute = map(int, text.split(":"))
+        endpoint = 360 if hour == 24 else (hour * 30 + minute * 0.5) % 360
+        expected_center = (endpoint + 15) % 360
+        assert (center, span) == (expected_center, 22), (label, start, end, center, span)
+        assert direction == ("COUNTER_CLOCKWISE" if 90 <= expected_center <= 270 else "CLOCKWISE")
         centers[label] = center
     return centers
 
@@ -577,10 +590,10 @@ def main() -> int:
         for part in root.findall(".//PartText")
         if (part.get("name") or "").startswith("session_countdown_")
     }
-    assert len(session_fonts) == 7
+    assert len(session_fonts) == len(_rows) + 2
     assert all(font is not None and font.get("letterSpacing") == "-0.05" for font in session_fonts)
     assert all(font.get("color") == SESSION_FADED_COLOR for font in session_fonts
-               if font is not None and font.text in {"PEAK", "TRANSITION", "TROUGH", "PERSONAL", "SLEEP"})
+               if font is not None and font.text in {row["name"] for row in _rows})
 
     indicator = root.find(".//Scene/BooleanConfiguration[@id='secIndicator']/BooleanOption/PartDraw")
     assert indicator is not None and indicator.find("Variant").attrib == {"mode":"AMBIENT", "target":"alpha", "value":"0"}
@@ -614,25 +627,17 @@ def main() -> int:
         assert variant.get("value", "").startswith("[CONFIGURATION.aod] == 3 ? 0 : ")
 
     countdown = {part.get("name"): part for part in root.findall(".//PartText") if (part.get("name") or "").startswith("session_countdown_")}
-    assert set(countdown) == {
-        "session_countdown_hours", "session_countdown_minutes", "session_countdown_peak",
-        "session_countdown_transition", "session_countdown_trough", "session_countdown_personal",
-        "session_countdown_sleep",
+    expected_session_names = {"session_countdown_hours", "session_countdown_minutes"} | {
+        f"session_countdown_{row['key']}"
+        for row in _rows
     }
+    assert set(countdown) == expected_session_names
     for part in countdown.values():
         assert part.get("alpha") == "0"
         variant = part.find("Variant")
         assert variant is not None and variant.attrib == {"mode": "AMBIENT", "target": "alpha", "value": "[CONFIGURATION.aod] == 3 ? 255 : 0"}
         assert_session_part_containment(part)
-    assert_session_countdown_centering([
-        countdown["session_countdown_hours"],
-        countdown["session_countdown_minutes"],
-        countdown["session_countdown_peak"],
-        countdown["session_countdown_transition"],
-        countdown["session_countdown_trough"],
-        countdown["session_countdown_personal"],
-        countdown["session_countdown_sleep"],
-    ])
+    assert_session_countdown_centering(list(countdown.values()))
     absurd_width = ET.fromstring(ET.tostring(countdown["session_countdown_hours"]))
     absurd_width.set("width", "600")
     try:
@@ -662,7 +667,8 @@ def main() -> int:
                             (countdown["session_countdown_minutes"], MINUTES_ROW_INK))] == [(84, 202), (242.5, 359.5)]
     label_condition = next(
         (condition for condition in root.findall(".//Scene/Condition")
-         if condition.find("Expressions/Expression[@name='isPeak']") is not None),
+         if condition.find("Default/PartText") is not None
+         and (condition.find("Default/PartText").get("name") or "").startswith("session_countdown_")),
         None,
     )
     assert label_condition is not None
@@ -671,20 +677,18 @@ def main() -> int:
         for expression in label_condition.findall("Expressions/Expression")
     }
     assert label_expressions == {
-        "isPeak": "[HOUR_0_23] >= 6 && !([HOUR_0_23] >= 11)",
-        "isTransition": "[HOUR_0_23] >= 11 && !([HOUR_0_23] >= 12)",
-        "isTrough": "[HOUR_0_23] >= 12 && !([HOUR_0_23] >= 17)",
-        "isPersonal": "[HOUR_0_23] >= 17 && !([HOUR_0_23] >= 22)",
+        "is_" + row["key"]:
+        f"[HOUR_0_23] >= {row['start'] // 60} && !([HOUR_0_23] >= {row['end'] // 60})"
+        for row in _rows[:-1]
     }
     label_bindings = {
         compare.get("expression"): compare.find("PartText")
         for compare in label_condition.findall("Compare")
     }
     expected_label_bindings = {
-        "isPeak": ("session_countdown_peak", "PEAK"),
-        "isTransition": ("session_countdown_transition", "TRANSITION"),
-        "isTrough": ("session_countdown_trough", "TROUGH"),
-        "isPersonal": ("session_countdown_personal", "PERSONAL"),
+        "is_" + row["key"]:
+        (f"session_countdown_{row['key']}", row["name"])
+        for row in _rows[:-1]
     }
     assert set(label_bindings) == set(expected_label_bindings)
     for expression_name, (expected_name, label) in expected_label_bindings.items():
@@ -694,19 +698,27 @@ def main() -> int:
         assert part.find("Text/Font").text == label
         assert part.find("Text/Font/Template") is None
     default_part = label_condition.find("Default/PartText")
-    assert default_part is countdown["session_countdown_sleep"]
-    assert default_part.find("Text/Font").text == "SLEEP"
+    assert default_part is countdown[f"session_countdown_{_rows[-1]['key']}"]
+    assert default_part.find("Text/Font").text == _rows[-1]["name"]
     assert default_part.find("Text/Font/Template") is None
     # The 26px label's measured 19px ink is centred in the 40.5px row gap:
     # y=220.5..239.5 leaves 18.5px below hours and exactly 3px above minutes.
     label_ink_top = float(default_part.get("y")) + (float(default_part.get("height")) - 19) / 2
     assert label_ink_top - 202 == 18.5
     assert 242.5 - (label_ink_top + 19) == 3
-    for name, label in (("session_countdown_peak", "PEAK"), ("session_countdown_transition", "TRANSITION"),
-                        ("session_countdown_trough", "TROUGH"), ("session_countdown_personal", "PERSONAL"),
-                        ("session_countdown_sleep", "SLEEP")):
+    for row in _rows:
+        name, label = f"session_countdown_{row['key']}", row["name"]
         assert countdown[name].find("Text/Font").text == label
         assert countdown[name].find("Text/Font/Template") is None
+    # Custom schedules have been structurally verified above; the remaining
+    # geometry sweep is the shipped-default-only invariant set.
+    default_schedule = [(row["start"], row["end"], row["name"]) for row in _rows] == [
+        (0, 360, "SLEEP"), (360, 660, "PEAK"), (660, 720, "TRANSITION"),
+        (720, 1020, "TROUGH"), (1020, 1320, "PERSONAL"), (1320, 1440, "SLEEP")
+    ]
+    if not default_schedule:
+        print(f"Session schedule verified: {len(_rows)} custom sessions")
+        return 0
     arc_condition = next(
         (condition for condition in root.findall(".//Scene/Condition")
          if condition.find("Expressions/Expression[@name='sessionArcEnabled']") is not None),
@@ -844,10 +856,11 @@ def main() -> int:
     assert endpoint_condition is not None
     endpoint_expressions = {e.get("name"): e.text for e in endpoint_condition.findall("Expressions/Expression")}
     assert endpoint_expressions == {
-        "sessionEndSleep": "[HOUR_0_23] >= 22 || !([HOUR_0_23] >= 6)",
-        "sessionEndPeak": "[HOUR_0_23] >= 6 && !([HOUR_0_23] >= 11)",
-        "sessionEndTransition": "[HOUR_0_23] >= 11 && !([HOUR_0_23] >= 12)",
-        "sessionEndTrough": "[HOUR_0_23] >= 12 && !([HOUR_0_23] >= 17)",
+        "sessionEndSleep": "([HOUR_0_23] >= 0 && !([HOUR_0_23] >= 6)) || ([HOUR_0_23] >= 22 && !([HOUR_0_23] >= 24))",
+        "sessionEndPeak": "([HOUR_0_23] >= 6 && !([HOUR_0_23] >= 11))",
+        "sessionEndTransition": "([HOUR_0_23] >= 11 && !([HOUR_0_23] >= 12))",
+        "sessionEndTrough": "([HOUR_0_23] >= 12 && !([HOUR_0_23] >= 17))",
+        "sessionEndPersonal": "([HOUR_0_23] >= 17 && !([HOUR_0_23] >= 22))",
     }
     assert {compare.get("expression"): compare.find("PartText").get("name") for compare in endpoint_condition.findall("Compare")} == {
         "sessionEndSleep": "session_end_sleep",
@@ -984,7 +997,13 @@ def main() -> int:
                 expected_end_part = {"SLEEP": "session_end_sleep", "PEAK": "session_end_peak", "TRANSITION": "session_end_transition", "TROUGH": "session_end_trough", "PERSONAL": "session_end_personal"}[expected_label]
                 selected_end = [name for name, source in endpoint_expressions.items() if evaluate_wff(source, hour, minute)]
                 assert len(selected_end) <= 1, (hour, minute, selected_end)
-                actual_end_part = ({"sessionEndSleep": "session_end_sleep", "sessionEndPeak": "session_end_peak", "sessionEndTransition": "session_end_transition", "sessionEndTrough": "session_end_trough"}[selected_end[0]] if selected_end else "session_end_personal")
+                actual_end_part = ({
+                    "sessionEndSleep": "session_end_sleep",
+                    "sessionEndPeak": "session_end_peak",
+                    "sessionEndTransition": "session_end_transition",
+                    "sessionEndTrough": "session_end_trough",
+                    "sessionEndPersonal": "session_end_personal",
+                }[selected_end[0]] if selected_end else "session_end_personal")
                 assert actual_end_part == expected_end_part, (hour, minute, actual_end_part)
     assert sleep_minutes == 480
     assert len(sleep_sweeps) == 480

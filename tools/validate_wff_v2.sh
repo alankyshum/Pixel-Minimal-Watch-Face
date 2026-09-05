@@ -55,4 +55,4 @@ source_is_verified
 jar_is_verified
 tar -tzf "$ARCHIVE" | grep -Fqx "watchface-$REVISION/third_party/wff/specification/validator/build.gradle"
 
-"$JAVA" -jar "$JAR" 2 "$ROOT/watchface/src/main/res/raw/watchface.xml"
+"$JAVA" -jar "$JAR" 2 --stop-on-fail "$ROOT/watchface/build/generated/session-res/raw/watchface.xml"

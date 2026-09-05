@@ -1,5 +1,3 @@
-import com.android.build.gradle.internal.tasks.factory.dependsOn
-
 plugins {
     id("com.android.application")
 }
@@ -35,3 +33,20 @@ android {
         }
     }
 }
+
+val generateWatchfaceSessions = tasks.register("generateWatchfaceSessions") {
+    inputs.file(rootProject.file("config/watchface-sessions.json"))
+    inputs.file(rootProject.file("tools/generate_watchface_sessions.py"))
+    inputs.file(rootProject.file("watchface/src/main/watchface-template.xml"))
+    val generated = layout.buildDirectory.file("generated/session-res/raw/watchface.xml")
+    outputs.file(generated)
+    doLast {
+        exec {
+            commandLine("python3", rootProject.file("tools/generate_watchface_sessions.py").absolutePath,
+                "--output", generated.get().asFile.absolutePath)
+        }
+    }
+}
+
+tasks.named("preBuild") { dependsOn(generateWatchfaceSessions) }
+android.sourceSets["main"].res.srcDir(layout.buildDirectory.dir("generated/session-res"))

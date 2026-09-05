@@ -16,8 +16,14 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+      - name: Generate watch-face sessions
+        run: python3 tools/generate_watchface_sessions.py
       - name: Check generated configuration inventory
         run: python3 tools/generate_readme_config.py --check
+      - name: Check generated watch-face sessions
+        run: python3 tools/generate_watchface_sessions.py --check
+      - name: Test watch-face session generator
+        run: python3 -m unittest tools/test_generate_watchface_sessions.py
       - name: Test configuration inventory generator
         run: python3 -m unittest tools/test_generate_readme_config.py
       - name: Verify fixed font mapping
@@ -25,7 +31,7 @@ jobs:
       - name: Validate against the official WFF v2 schema
         run: tools/validate_wff_v2.sh
       - name: Parse watch-face resource XML
-        run: python3 -c "import xml.etree.ElementTree as ET; ET.parse('watchface/src/main/res/raw/watchface.xml'); ET.parse('watchface/src/main/res/values/strings.xml')"
+        run: python3 -c "import xml.etree.ElementTree as ET; ET.parse('watchface/build/generated/session-res/raw/watchface.xml'); ET.parse('watchface/src/main/res/values/strings.xml')"
       - name: Test shared bridge protocol
         run: bash ./gradlew :shared-protocol:testDebugUnitTest
       - name: Build debug applications
