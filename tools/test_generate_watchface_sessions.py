@@ -63,6 +63,32 @@ class SessionGeneratorTests(unittest.TestCase):
         self.assertIn(": 180", text)
         self.assertIn("+ 1440", text)
 
+    def test_duplicate_start_rejected_separately(self):
+        rows = [
+            {"name": "A", "start": "00:00", "end": "06:00"},
+            {"name": "B", "start": "00:00", "end": "24:00"},
+        ]
+        with self.assertRaisesRegex(ValueError, r"session 1: duplicate start boundary 00:00"):
+            self.schedule(rows)
+
+    def test_invalid_start_order_rejected_separately(self):
+        rows = [
+            {"name": "A", "start": "00:00", "end": "12:00"},
+            {"name": "B", "start": "12:00", "end": "18:00"},
+            {"name": "C", "start": "06:00", "end": "24:00"},
+        ]
+        with self.assertRaisesRegex(ValueError, r"sessions must be in chronological start-time order"):
+            self.schedule(rows)
+
+    def test_overnight_session_must_be_last(self):
+        rows = [
+            {"name": "A", "start": "00:00", "end": "06:00"},
+            {"name": "NIGHT", "start": "06:00", "end": "03:00"},
+            {"name": "B", "start": "12:00", "end": "24:00"},
+        ]
+        with self.assertRaisesRegex(ValueError, r"^the overnight session must be last in chronological start-time order$"):
+            self.schedule(rows)
+
     def test_invalid_configs(self):
         invalid = [
             [{"name": "A", "duration": 60}],

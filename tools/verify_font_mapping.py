@@ -39,31 +39,28 @@ CURRENT_TRAIL = 0.0
 CURRENT_PATH_SPAN = 22.0
 MARKER_TO_CURRENT_INK_CLEARANCE = 0.0
 # Deliberately independent of the WFF expressions below: this is the product
-# specification against which their *evaluated* results are checked.
-SESSION_SPEC = (
-    (0, 6, "SLEEP", 360, 180),
-    (6, 11, "PEAK", 660, 330),
-    (11, 12, "TRANSITION", 720, 360),
-    (12, 17, "TROUGH", 1020, 150),
-    (17, 22, "PERSONAL", 1320, 300),
-    (22, 24, "SLEEP", 1800, 180),
+# specification against which their *evaluated* results are checked.  Keep a
+# single configured overnight row as a single circular logical session.
+import importlib.util
+_schedule_module = importlib.util.spec_from_file_location(
+    "watchface_sessions", ROOT / "tools/generate_watchface_sessions.py"
 )
+assert _schedule_module and _schedule_module.loader
+_schedule = importlib.util.module_from_spec(_schedule_module)
+_schedule_module.loader.exec_module(_schedule)
+_rows = _schedule.schedule()
 
-# Keep the verifier's schedule input aligned with the build generator. The
-# literal above remains a readable safety reference for the shipped default.
-try:
-    import importlib.util
-    _schedule_module = importlib.util.spec_from_file_location("watchface_sessions", ROOT / "tools/generate_watchface_sessions.py")
-    assert _schedule_module and _schedule_module.loader
-    _schedule = importlib.util.module_from_spec(_schedule_module)
-    _schedule_module.loader.exec_module(_schedule)
-    _rows = _schedule.schedule()
-    _merged = len(_rows) > 1 and _rows[0]["name"] == _rows[-1]["name"]
-    SESSION_SPEC = tuple((r["start"] // 60, r["end"] // 60, r["name"],
-                          r["end"] + (_rows[0]["end"] if _merged and r is _rows[-1] else 0),
-                          (lambda end: 360 if end % 720 == 0 else (end // 60 * 30) % 360)(_rows[0]["end"] if _merged and r is _rows[-1] else r["end"])) for r in _rows)
-except Exception:
-    pass
+
+def _endpoint_angle(end: int) -> int:
+    return 360 if end % 720 == 0 else (end // 60 * 30) % 360
+
+
+SESSION_SPEC = tuple(
+    (row["start"], row["end"], row["name"],
+     row["end"] + (1440 if row["wraps"] else 0),
+     _endpoint_angle(row["end"]))
+    for row in _rows
+)
 UNRELATED_SLOT_SNAPSHOTS = {
     "0": "db6264d8e566bd140fd14642f8131a7ce10d7ca5287e9d1e0d1ee39f87cd9681",
     "1": "27c959502dfbbd256eb95a423e9554fa81c224c1c0e7dcd9ef6dd32cf9c0be58",
@@ -263,12 +260,16 @@ def evaluate_wff(source: str, hour: int, minute: int):
 
 def specified_session(hour: int, minute: int) -> tuple[int, int, str, int | None]:
     """Independent, explicit local-time session schedule specification."""
-    start, _, label, end, angle = next(row for row in SESSION_SPEC if row[0] <= hour < row[1])
-    del start
-    remaining = end - (hour * 60 + minute)
+    now = hour * 60 + minute
+    start, end, label, true_end, angle = next(
+        row for row in SESSION_SPEC
+        if ((row[0] <= now < row[1]) if row[1] >= row[0]
+            else (now >= row[0] or now < row[1]))
+    )
+    remaining = true_end - (now + (1440 if true_end > 1440 and now < end else 0))
     # Session end instants belong to the next session, so remaining is positive.
     # This positive-input precondition makes Python // and % match WFF here.
-    assert 0 < remaining <= max(row[3] for row in SESSION_SPEC)
+    assert 0 < remaining <= max((row[3] - row[0]) % 1440 or 1440 for row in SESSION_SPEC)
     return remaining // 60, remaining % 60, label, angle
 
 
@@ -713,8 +714,8 @@ def main() -> int:
     # Custom schedules have been structurally verified above; the remaining
     # geometry sweep is the shipped-default-only invariant set.
     default_schedule = [(row["start"], row["end"], row["name"]) for row in _rows] == [
-        (0, 360, "SLEEP"), (360, 660, "PEAK"), (660, 720, "TRANSITION"),
-        (720, 1020, "TROUGH"), (1020, 1320, "PERSONAL"), (1320, 1440, "SLEEP")
+        (360, 660, "PEAK"), (660, 720, "TRANSITION"),
+        (720, 1020, "TROUGH"), (1020, 1320, "PERSONAL"), (1320, 360, "SLEEP")
     ]
     if not default_schedule:
         print(f"Session schedule verified: {len(_rows)} custom sessions")
@@ -811,7 +812,11 @@ def main() -> int:
     # the current envelope remains another 8px inward.
     assert endpoint_radius + WORST_ENDPOINT_INK[1] / 2 < arc_radius - 1.5
     end_labels = {part.get("name"): part for part in arc_condition.findall(".//PartText") if (part.get("name") or "").startswith("session_end_")}
-    assert {name: part.find("TextCircular/Font").text for name, part in end_labels.items()} == {"session_end_sleep": "06:00", "session_end_peak": "11:00", "session_end_transition": "12:00", "session_end_trough": "17:00", "session_end_personal": "22:00"}
+    assert {name: part.find("TextCircular/Font").text for name, part in end_labels.items()} == {
+        "session_end_peak_0": "11:00", "session_end_transition_1": "12:00",
+        "session_end_trough_2": "17:00", "session_end_personal_3": "22:00",
+        "session_end_sleep_4": "06:00",
+    }
     assert all(part.find("TextCircular/Font/Template") is None for part in end_labels.values())
     assert all(part.find("TextCircular").get("width") == "406" for part in end_labels.values())
     assert all(part.find("TextCircular/Font").get("size") == "24" for part in end_labels.values())
@@ -821,11 +826,11 @@ def main() -> int:
     # span to the independent endpoint-placement specification.  Checking both
     # catches a mutation to either source angle for every endpoint label.
     endpoint_paths = {
-        "SLEEP": end_labels["session_end_sleep"].find("TextCircular"),
-        "PEAK": end_labels["session_end_peak"].find("TextCircular"),
-        "TRANSITION": end_labels["session_end_transition"].find("TextCircular"),
-        "TROUGH": end_labels["session_end_trough"].find("TextCircular"),
-        "PERSONAL": end_labels["session_end_personal"].find("TextCircular"),
+        "SLEEP": end_labels["session_end_sleep_4"].find("TextCircular"),
+        "PEAK": end_labels["session_end_peak_0"].find("TextCircular"),
+        "TRANSITION": end_labels["session_end_transition_1"].find("TextCircular"),
+        "TROUGH": end_labels["session_end_trough_2"].find("TextCircular"),
+        "PERSONAL": end_labels["session_end_personal_3"].find("TextCircular"),
     }
     assert all(path is not None for path in endpoint_paths.values())
     endpoint_centers = endpoint_label_geometry(endpoint_paths)
@@ -850,25 +855,25 @@ def main() -> int:
     assert all(part.find("Variant").get("value") == "[CONFIGURATION.aod] == 3 ? 255 : 0" for part in end_labels.values())
     endpoint_condition = next(
         (condition for condition in arc_condition.findall("Compare/Condition")
-         if condition.find("Expressions/Expression[@name='sessionEndPeak']") is not None),
+         if condition.find("Expressions/Expression[@name='sessionEnd_0']") is not None),
         None,
     )
     assert endpoint_condition is not None
     endpoint_expressions = {e.get("name"): e.text for e in endpoint_condition.findall("Expressions/Expression")}
     assert endpoint_expressions == {
-        "sessionEndSleep": "([HOUR_0_23] >= 0 && !([HOUR_0_23] >= 6)) || ([HOUR_0_23] >= 22 && !([HOUR_0_23] >= 24))",
-        "sessionEndPeak": "([HOUR_0_23] >= 6 && !([HOUR_0_23] >= 11))",
-        "sessionEndTransition": "([HOUR_0_23] >= 11 && !([HOUR_0_23] >= 12))",
-        "sessionEndTrough": "([HOUR_0_23] >= 12 && !([HOUR_0_23] >= 17))",
-        "sessionEndPersonal": "([HOUR_0_23] >= 17 && !([HOUR_0_23] >= 22))",
+        "sessionEnd_0": "([HOUR_0_23] >= 6 && !([HOUR_0_23] >= 11))",
+        "sessionEnd_1": "([HOUR_0_23] >= 11 && !([HOUR_0_23] >= 12))",
+        "sessionEnd_2": "([HOUR_0_23] >= 12 && !([HOUR_0_23] >= 17))",
+        "sessionEnd_3": "([HOUR_0_23] >= 17 && !([HOUR_0_23] >= 22))",
+        "sessionEnd_4": "([HOUR_0_23] >= 22 || !([HOUR_0_23] >= 6))",
     }
     assert {compare.get("expression"): compare.find("PartText").get("name") for compare in endpoint_condition.findall("Compare")} == {
-        "sessionEndSleep": "session_end_sleep",
-        "sessionEndPeak": "session_end_peak",
-        "sessionEndTransition": "session_end_transition",
-        "sessionEndTrough": "session_end_trough",
+        "sessionEnd_0": "session_end_peak_0",
+        "sessionEnd_1": "session_end_transition_1",
+        "sessionEnd_2": "session_end_trough_2",
+        "sessionEnd_3": "session_end_personal_3",
     }
-    assert endpoint_condition.find("Default/PartText").get("name") == "session_end_personal"
+    assert endpoint_condition.find("Default/PartText").get("name") == "session_end_sleep_4"
     for clock_time, hour, minute, expected in (
         ("00:00", 0, 0, (6, 0, "SLEEP", 180)),
         ("05:59", 5, 59, (0, 1, "SLEEP", 180)),
@@ -994,16 +999,16 @@ def main() -> int:
                     oriented_box_clearance(endpoint_box, axis_aligned_box(box)) > 0
                     for box in central_boxes
                 ), (hour, minute, endpoint_angle)
-                expected_end_part = {"SLEEP": "session_end_sleep", "PEAK": "session_end_peak", "TRANSITION": "session_end_transition", "TROUGH": "session_end_trough", "PERSONAL": "session_end_personal"}[expected_label]
+                expected_end_part = {
+                    row["name"]: f"session_end_{re.sub(r'[^A-Za-z0-9_]', '_', row['name'].lower())}_{index}"
+                    for index, row in enumerate(_rows)
+                }[expected_label]
                 selected_end = [name for name, source in endpoint_expressions.items() if evaluate_wff(source, hour, minute)]
                 assert len(selected_end) <= 1, (hour, minute, selected_end)
                 actual_end_part = ({
-                    "sessionEndSleep": "session_end_sleep",
-                    "sessionEndPeak": "session_end_peak",
-                    "sessionEndTransition": "session_end_transition",
-                    "sessionEndTrough": "session_end_trough",
-                    "sessionEndPersonal": "session_end_personal",
-                }[selected_end[0]] if selected_end else "session_end_personal")
+                    f"sessionEnd_{index}": f"session_end_{re.sub(r'[^A-Za-z0-9_]', '_', row['name'].lower())}_{index}"
+                    for index, row in enumerate(_rows)
+                }[selected_end[0]] if selected_end else f"session_end_{_rows[-1]['name'].lower()}_{len(_rows) - 1}")
                 assert actual_end_part == expected_end_part, (hour, minute, actual_end_part)
     assert sleep_minutes == 480
     assert len(sleep_sweeps) == 480
