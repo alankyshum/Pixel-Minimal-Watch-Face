@@ -26,10 +26,15 @@ Slots remain configurable in the Wear OS complication editor. Phone Battery Comp
 ## Build and personal use
 
 Session Countdown is generated from `config/watchface-sessions.json`. Edit the
-`sessions` array (each item has a `name` plus either a minute `duration` or
-`start`/`end` in `HH:MM`), then run `bash ./gradlew :watchface:assembleDebug`.
-The build validates JSON, names, hour-boundary times/durations, contiguous
-coverage, and full-day coverage before Android resource processing and
+`sessions` array; every item must contain exactly `name`, `start`, and `end` in
+`HH:MM` (there is no `duration` field), then run `bash ./gradlew :watchface:assembleDebug`.
+Entries are ordered by increasing start time, with an optional single overnight
+entry last (for example `22:00`→`06:00`). The array count is the logical/displayed
+session count: overnight coverage is split internally only for hour conditions,
+while its name and endpoint remain singular. Start boundaries must be unique and
+whole-hour; intervals must be positive, contiguous, gap-free, and cover exactly
+24 hours. `24:00` is allowed only as a non-wrapping end boundary. The build validates JSON, names, hour-boundary times,
+contiguous circular coverage, and full-day coverage before Android resource processing and
 regenerates `watchface.xml` (the WFF schedule expressions expose hours, not
 minute thresholds).
 
