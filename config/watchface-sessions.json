@@ -1,9 +1,7 @@
 {
   "sessions": [
-    {"name": "PEAK", "start": "06:00", "end": "11:00"},
-    {"name": "TRANSITION", "start": "11:00", "end": "12:00"},
-    {"name": "TROUGH", "start": "12:00", "end": "17:00"},
-    {"name": "PERSONAL", "start": "17:00", "end": "22:00"},
-    {"name": "SLEEP", "start": "22:00", "end": "06:00"}
+    {"name": "PEAK", "start": "09:00", "end": "17:00"},
+    {"name": "PERSONAL", "start": "17:00", "end": "23:00"},
+    {"name": "SLEEP", "start": "23:00", "end": "09:00"}
   ]
 }
