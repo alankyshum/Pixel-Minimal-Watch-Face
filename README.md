@@ -2,89 +2,63 @@
 
 This is a configurable derivative of an upstream WFF2 watch face for Wear OS 5+. It is source-available for personal use and GitHub forking under the written upstream permission recorded in [UPSTREAM_PERMISSION.md](UPSTREAM_PERMISSION.md).
 
+## Quick start
+
+1. Edit [`config/watchface-sessions.json`](config/watchface-sessions.json). The `sessions` array must contain exactly `name`, `start`, and `end` in `HH:MM`; schedules must be ordered, contiguous, and cover 24 hours. An overnight entry such as `22:00`→`06:00` may be last.
+2. Validate and generate the WFF resource:
+
+   ```sh
+   ./scripts/validate
+   ```
+
+3. Build the debug APK (this validates/generates again, then builds):
+
+   ```sh
+   ./scripts/build-watchface
+   ```
+
+4. Find the printed APK path at `watchface/build/outputs/apk/debug/watchface-debug.apk`. Install it to a compatible Wear OS 5+ watch with Android Studio or `adb` for personal use.
+
+The scripts are thin wrappers around the existing Python tools, official WFF validator, and Gradle build. They require Python 3, a Wear OS/Android SDK for Gradle, and Java 17; the build script discovers Java 17 on macOS when `JAVA_HOME` is not already set.
+
+## Development
+
+The session generator validates JSON and regenerates `watchface.xml` before Android resource processing. Gradle's `preBuild` task also runs it, so direct Gradle builds remain safe. `24:00` is allowed only as a non-wrapping end boundary. The generated configuration inventory below comes from the static watchface template and `strings.xml`; do not edit it manually.
+
+Useful direct commands:
+
+```sh
+python3 tools/generate_watchface_sessions.py
+python3 tools/generate_watchface_sessions.py --check
+python3 tools/generate_readme_config.py --check
+python3 -m unittest tools/test_generate_watchface_sessions.py
+python3 -m unittest tools/test_generate_readme_config.py
+python3 tools/verify_font_mapping.py
+tools/validate_wff_v2.sh
+```
+
+For one-time repository-local pre-commit checks (without changing global Git configuration):
+
+```sh
+git config core.hooksPath .githooks
+```
+
+The official WFF validator uses a checksum-pinned Google watchface source cache under `${XDG_CACHE_HOME:-$HOME/.cache}`. It needs `curl`, `tar`, a POSIX shell, and Java 17 when rebuilding or downloading that cache. The validator source is Google’s Apache-2.0 [watchface repository](https://github.com/google/watchface), commit `44b1855d445686ac8de5dbc95003d6f8e6623643`; the downloaded codeload archive must match SHA-256 `d32b020cd7130b0d5d0a576878b452785b46c1c614642f4af55a937ef551ed4d`.
+
+See [LOCAL_ARCHITECTURE.md](LOCAL_ARCHITECTURE.md) for the optional local phone/watch bridge modules. The third-party [Phone Battery Complication](https://play.google.com/store/apps/details?id=com.weartools.phonebattcomp) is not bundled here.
+
 ## Current layout and assignments
 
-**Session Countdown SLEEP furnishing:** during 22:00–06:00, the AOD Session
-Countdown retains its central countdown and `SLEEP` label and also renders the
-clockwise session arc, current `HH:mm` trail, marker, and fixed `06:00` endpoint.
-The endpoint is the normalized 180° angle (not 540°): its clockwise sweep is
-240° at 22:00, 180.5° at 23:59, 180° at 00:00, and 0.5° at 05:59. The `06:00`
-label is faded `#cccccc`, 24px NORMAL at r195, on an inward lower-hemisphere
-`COUNTER_CLOCKWISE` 191→169° path.
+- Center: large Nova Mono digital clock.
+- Top outer arc (slot 2): Phone Battery Complication or another supported text provider.
+- Top inner arc (slot 4): independent text-only `SHORT_TEXT` or `LONG_TEXT` complication.
+- Bottom (slot 3): adaptive circular text; left (slot 0) is Day & Date and right (slot 1) is a timer/countdown.
+- Hour Animation retains the compatibility `secIndicator` setting and moves at minute-level granularity without seconds.
+- Session Countdown is an opt-in AOD style with configurable session labels, countdown rows, current time, endpoint labels, and arc.
 
-- **Center:** large Nova Mono digital clock.
-- **Top outer arc (slot 2):** the third-party [Phone Battery Complication](https://play.google.com/store/apps/details?id=com.weartools.phonebattcomp) default provider. Its normal text behavior is retained; its combined-battery presentation follows the same outer arc so it remains inside that slot's selectable/cropped arc shape, preserving watch and companion/phone percentages as plain circular text separated by a centered dot, without inline watch/phone icons because inline images are not used on the circular path. Special top notification rows use a compact monochromatic icon at the arc apex.
-- **Top inner arc (slot 4):** an independent, initially unassigned text-only `SHORT_TEXT` or `LONG_TEXT` complication. `SHORT_TEXT` displays provider text only; `LONG_TEXT` displays provider text followed by its title (for example, `Now > 11:15`). Its narrower circular-text arc is below slot 2 and above the clock, leaving the left and right circular complication areas clear.
-- **Bottom (slot 3):** adaptive lower circular text, defaulting to Day & Date. Arc A (outer/farther) is radius 205/diameter 410, `251.5→108.5°`, and Arc B (inner/closer) is radius 160/diameter 320, `238.5→121.5°`, both counter-clockwise about global 225,225: exact 30% geometric expansions of the former 110°/90° paths. Their 40px ink-safe bands leave a 5px radial gap. `SHORT_TEXT` retains its title-aware behavior: one-line content uses Arc A for 23 characters; with a nonempty title, `TEXT` (read first) uses Arc B for 20 and `TITLE` uses Arc A for 23. `LONG_TEXT` notification previews ignore `TITLE` (which providers can use for an app name). The nominal two-line capacity is 61 characters: Arc B receives up to 27 and Arc A up to 34. For overflow, WFF v2's lack of native search is addressed by the same finite descending `subText` comparison chain on both arcs: it selects the last ASCII space at indices 27 through 1 and consumes exactly that selected separator before rendering the preceding/following text without an artificial hyphen. Adjacent repeated ASCII spaces are not normalized: a space immediately before the selected separator remains at the end of Arc B, and one immediately after it remains at the start of Arc A. If no such space exists (including unbroken words and CJK text), it deliberately stays on one Arc-A line truncated to 34 characters rather than breaking a word across arcs. The sole `r=182.5`, 85px-thick `BoundingArc` crop is `259→101°`, covering radial 140..225 with a conservative 13px angular ink margin. This deliberate wider layout comes closer to the left/right side visuals; it no longer promises side-box endpoint clearance. The verifier instead checks rendered-path/raster containment, crop containment, on-screen bounds, clock clearance, and AOD visibility. Unusually wide glyph sequences remain authoritatively cropped. Exact `---` notification sentinel remains icon-only even when its provider supplies a title. Combined battery (invisible U+FEFF sentinel) uses Arc A.
-- **Left (slot 0):** system **Day & Date** `SHORT_TEXT`, customized to omit the provider icon and show centered `MM/DD` and uppercase English weekday lines.
-- **Right (slot 1):** timer/countdown complication.
-- **Hour Animation:** the compatibility-preserved `secIndicator` setting is labelled **Hour Animation**. When enabled, its visual arc is hidden in ambient and uses exactly `[HOUR_0_11] * 30 + [MINUTE] * 0.5`, updating at minute-level granularity so it moves proportionally through each hour: 09:00=270°, 09:30=285°, 09:59=299.5°, 11:59=359.5°, and 12:00=0°. It uses a one-shot 0.4-second clockwise transition (`repeat="0"`) and does not use seconds.
-- **AOD Session Countdown:** the opt-in **Session Countdown** AOD style leaves interactive mode and AOD styles 0–2 unchanged, then replaces the ambient clock with solid-white, zero-padded `hh`/`mm` rows at **158px**. Sessions are **PEAK** 06:00–11:00, **TRANSITION** 11:00–12:00, **TROUGH** 12:00–17:00, **PERSONAL** 17:00–22:00, and **SLEEP** 22:00–06:00. The 3px `r=215` arc begins at the hour-hand angle and ends at the active boundary. Its fully opaque marker apex is at `r=217`, joining the arc’s `r=216.5` outer edge by 0.5px; the hash-pinned authored marker also has a partial-alpha fringe at its outer reach, within the approved safe circle. In every minute—all 1,440 minutes, including 480 SLEEP minutes—emphasized full-white 24px `HH:mm` uses a 22° path at `r=203`, centered a continuous 19° counter-clockwise behind the marker—strictly closer than the former 20° layout. The verifier uses an approved conservative 66×19px painted-ink envelope for both current time and endpoint labels; this is a checked safety pin, not a renderer-precision measurement claim. It leaves 1px before the arc's `r=213.5` inner edge. WFF v2 cannot transform `TextCircular.direction`, so the identical normalized physical path branches at its 109°..289° lower-hemisphere range: upper text is clockwise (glyph tops outward), lower is counter-clockwise (glyph tops toward center). Endpoint labels remain 24px at `r=195`; TROUGH and SLEEP use lower-hemisphere `COUNTER_CLOCKWISE` paths, while PEAK, TRANSITION, and PERSONAL remain `CLOCKWISE`. Arc stroke, endpoint labels, and session labels share faded `#cccccc` (exactly 1.5× `#888888` by RGB channel), below the `#ffffff` current time, marker, and countdown rows; all AOD gating remains alpha 255. All seven central `PartText` boxes retain the +4px right, −4px up optical offset (rows at `x=4,y=64/222`; labels at `x=4,y=217`): their 450px rasters deliberately extend to x=454, while the verifier binds actual `x/y/width/height`, center alignment, and painted-ink corners to the circular face. It mutation-tests an absurd 600px width. The verifier exhaustively evaluates all 1,440 minutes, including 480 SLEEP minutes, using positive-gap SAT for current/endpoint ink rectangles and explicitly proves the current path ends 8° behind the marker while the arc sweeps forward from it to its endpoint, as well as checking hemisphere continuity, marker/path clearance, arc, center, and endpoint-wrap bounds. SLEEP shows the arc, marker, current `HH:mm`, and fixed `06:00` endpoint.
-
-Slots remain configurable in the Wear OS complication editor. Phone Battery Complication is a third-party app and is **not bundled** here. The optional `phone-companion`, `watch-provider`, and `shared-protocol` modules are local bridge modules; they are separate from the third-party provider and are not required for the assignments above. See [LOCAL_ARCHITECTURE.md](LOCAL_ARCHITECTURE.md) for their local-only design.
-
-## Build and personal use
-
-Session Countdown is generated from `config/watchface-sessions.json`. Edit the
-`sessions` array; every item must contain exactly `name`, `start`, and `end` in
-`HH:MM` (there is no `duration` field), then run `bash ./gradlew :watchface:assembleDebug`.
-Entries are ordered by increasing start time, with an optional single overnight
-entry last (for example `22:00`→`06:00`). The array count is the logical/displayed
-session count: overnight coverage is split internally only for hour conditions,
-while its name and endpoint remain singular. Start boundaries must be unique and
-whole-hour; intervals must be positive, contiguous, gap-free, and cover exactly
-24 hours. `24:00` is allowed only as a non-wrapping end boundary. The build validates JSON, names, hour-boundary times,
-contiguous circular coverage, and full-day coverage before Android resource processing and
-regenerates `watchface.xml` (the WFF schedule expressions expose hours, not
-minute thresholds).
-
-1. Open the project in Android Studio with an installed Wear OS SDK, or run `bash ./gradlew :watchface:assembleDebug`.
-2. Install the resulting debug APK to a compatible Wear OS 5+ watch using Android Studio or `adb` for your own personal use. The hardware serial is the value from `adb -s "$selector" shell getprop ro.serialno`; the ADB selector is the first column of `adb devices -l` (it may be an mDNS transport name) and is the value passed to `adb -s`. Replace the placeholder below with the hardware serial; it finds exactly one connected `device` selector before building and installing:
-
-   ```bash
-   WATCH_HARDWARE_SERIAL='WATCH_HARDWARE_SERIAL' bash <<'BASH'
-   set -euo pipefail
-   : "${WATCH_HARDWARE_SERIAL:?Set WATCH_HARDWARE_SERIAL to the watch hardware serial}"
-   export JAVA_HOME="${JAVA_HOME:-/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home}"
-   export PATH="$JAVA_HOME/bin:$PATH"
-
-   matches=()
-   while IFS= read -r selector; do
-     serial="$(adb -s "$selector" shell getprop ro.serialno </dev/null | tr -d '\r')"
-     [[ "$serial" == "$WATCH_HARDWARE_SERIAL" ]] && matches+=("$selector")
-   done < <(adb devices -l | awk '$2 == "device" { print $1 }')
-
-   ((${#matches[@]} == 1)) || { printf 'Expected one device for hardware serial %s; found %d\n' "$WATCH_HARDWARE_SERIAL" "${#matches[@]}" >&2; exit 1; }
-   bash ./gradlew :watchface:assembleDebug
-   adb -s "${matches[0]}" install -r watchface/build/outputs/apk/debug/watchface-debug.apk
-   BASH
-   ```
-3. Select **Pixel Minimal Long Text (Local)** and set the five complication slots in the watch/phone complication editor. Install and configure the third-party provider apps separately if you use them.
-4. For the optional local bridge, build/install its phone and watch debug APKs on their respective devices; its current signing/deployment constraints are documented in [LOCAL_ARCHITECTURE.md](LOCAL_ARCHITECTURE.md).
-
-This checkout has no release signing setup. Compiled APKs are not distributed by this repository.
-
-## Font mapping and circular-text safety
-
-- The 112px center clock uses the unmodified static Nova Mono Regular Google Fonts artifact (OS/2 weight class 400); provenance, source URL, and SHA-256 are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Its fixed-pitch metrics keep clock glyphs neat without tracking, because WFF v2 `TimeText` fonts do not permit `letterSpacing`. Left date display and right Timer retain bundled Orbitron with `letterSpacing="-0.05"` (−0.05em).
-- Session Countdown current time uses the SHA-pinned Nova Mono `NORMAL` face: `fc-scan` identifies the bundled font as Regular, so no collision bound relies on unobservable renderer synthetic emboldening. It is emphasized safely by full-white 24px ink against the faded `#cccccc` arc/end/session annotations. The verifier pins and mutation-tests a conservative approved 66×19px painted-ink envelope for every shipped 24px time string.
-- Top and bottom text complications (slots 2, 4, and 3) use `SYNC_TO_DEVICE` with `letterSpacing="-0.05"`. Slot 3 retains 18/22/26px options, exactly one `TextCircular` per sibling `PartText`, tight ±13px-ink rasters, and explicit bounded expressions. Its conservative single `BoundingArc` remains the authoritative crop; path-level verification additionally enforces separate radial bands, crop containment, clock/edge clearance, and AOD safety.
-
-### v1.0.17 release note
-
-Bottom `LONG_TEXT` now wraps at an ASCII word boundary with an approximately 49% larger nominal 61-character two-line budget; it suppresses provider `TITLE`, adds no artificial hyphen, and falls back to one truncated line when no space exists. `CalendarComplicationService` now declares an explicit service-level icon so compatible provider pickers can list it. This is source-only: no APK is included or released.
-
-### v1.0.16 release note
-
-Ships exact 30%-wider adaptive bottom arcs, plus the restored minute-interpolated **Hour Animation** while retaining the `secIndicator` compatibility ID. It also includes the Nova Mono clock, safe side/`PartText` tracking, WFF validation hardening, and lower-power local bridge updates. This source-only release is neither release-signed nor accompanied by an uploaded APK.
-
-### v1.0.15 release note
-
-Adds an independent second top circular text complication (slot 4). Its `LONG_TEXT` rendering includes both provider text and title (for example, `Now > 11:15`) while keeping the existing top slot's battery and notification behavior inside its circular arc.
+Slots remain configurable in the Wear OS complication editor. Install and configure third-party provider apps separately if used.
 
 ## Configuration inventory
-
-This section is generated from the static `watchface/src/main/watchface-template.xml` and `strings.xml`; it does not require generated build output. Do not edit it manually. CI and the repository hook use `--check` to reject stale content.
 
 <!-- BEGIN GENERATED CONFIGURATION INVENTORY -->
 
@@ -124,30 +98,18 @@ This section is generated from the static `watchface/src/main/watchface-template
 Default flavor: `0`.
 <!-- END GENERATED CONFIGURATION INVENTORY -->
 
-## Contributor checks
+## Build and personal use
 
-```sh
-# One-time, repository-local hook setup (does not alter global Git configuration)
-git config core.hooksPath .githooks
+This checkout has no release signing setup. Compiled APKs are not distributed by this repository. Install the debug APK with Android Studio or `adb`; the scripts intentionally do not select a device or install automatically.
 
-# Refresh/check this README's generated inventory
-python3 tools/generate_readme_config.py
-python3 tools/generate_readme_config.py --check
+## Font mapping and circular-text safety
 
-# Verify the fixed font mapping and non-font WFF invariants
-python3 tools/verify_font_mapping.py
+The 112px center clock uses the unmodified static Nova Mono Regular Google Fonts artifact. Left date and right Timer retain bundled Orbitron. Provenance, source URLs, and SHA-256 values are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The static font/geometry invariants are checked by `tools/verify_font_mapping.py`.
 
-# Download a checksum-pinned Google watchface source tree, build its official
-# validator, and validate this resource against WFF schema version 2.
-tools/validate_wff_v2.sh
-```
+## Changelog
 
-The tracked pre-commit hook runs the README `--check` command, static font/geometry verifier, and the portable official WFF v2 validation command. The latter caches a checksum-pinned source archive under `${XDG_CACHE_HOME:-$HOME/.cache}`; before executing it validates the archive, pinned validator build source, and validator JAR digests, so a verified cache does not force network access. It needs `curl`, `tar`, a POSIX shell, and Java 17 only when rebuilding/downloading. It is intentionally activated only after the explicit local `core.hooksPath` command above.
-
-The validator source is Google’s Apache-2.0 [watchface repository](https://github.com/google/watchface), commit `44b1855d445686ac8de5dbc95003d6f8e6623643`; the downloaded codeload archive must match SHA-256 `d32b020cd7130b0d5d0a576878b452785b46c1c614642f4af55a937ef551ed4d`. It builds the repository’s documented `:specification:validator:executable-jar` target and invokes `java -jar wff-validator.jar 2 watchface/build/generated/session-res/raw/watchface.xml`. This is a portable replacement for the reviewer-session schema-tree path; `xmllint` cannot compile the official schema because its XSD 1.0 implementation rejects the schema’s repeated members in `xs:all`.
+Release history is maintained separately in [CHANGELOG.md](CHANGELOG.md).
 
 ## Permission, licensing, and publication status
 
-This repository is **source-available, not OSI open source**. The supplied written upstream permission is quoted verbatim in [UPSTREAM_PERMISSION.md](UPSTREAM_PERMISSION.md). It is interpreted narrowly as permission for public source hosting and GitHub forking for personal use. It does not grant or claim commercial rights, sublicensing, general redistribution, or APK/release distribution. Downstream users should seek clarification from the upstream rights holder for rights beyond that quoted permission. This is practical compliance information, not legal advice.
-
-The bundled Orbitron and Nova Mono fonts are unmodified and licensed under the SIL Open Font License 1.1; see [OFL.txt](OFL.txt), [NOVA_MONO_OFL.txt](NOVA_MONO_OFL.txt), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). No blanket license applies to the remaining upstream-derived material.
+This repository is **source-available, not OSI open source**. The supplied written upstream permission is quoted verbatim in [UPSTREAM_PERMISSION.md](UPSTREAM_PERMISSION.md). It does not grant or claim commercial rights, sublicensing, general redistribution, or APK/release distribution. The bundled fonts are unmodified and licensed under the SIL Open Font License 1.1; see [OFL.txt](OFL.txt), [NOVA_MONO_OFL.txt](NOVA_MONO_OFL.txt), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+python3 tools/generate_watchface_sessions.py
+python3 tools/generate_readme_config.py --check
+python3 tools/generate_watchface_sessions.py --check
+python3 -m unittest tools/test_generate_watchface_sessions.py
+python3 -m unittest tools/test_generate_readme_config.py
+python3 tools/verify_font_mapping.py
+python3 -c "import xml.etree.ElementTree as ET; ET.parse('watchface/build/generated/session-res/raw/watchface.xml'); ET.parse('watchface/src/main/res/values/strings.xml')"
+tools/validate_wff_v2.sh

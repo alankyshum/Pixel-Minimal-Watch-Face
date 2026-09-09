@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 
@@ -86,7 +88,13 @@ class GenerateReadmeConfigTests(unittest.TestCase):
             sys.argv = ["generate_readme_config.py", "--check"]
             self.assertEqual(generator.main(), 0)
             generator.README.write_text(generator.README.read_text().replace("### User configurations", "### stale configurations"))
-            self.assertEqual(generator.main(), 1)
+            output = io.StringIO()
+            with redirect_stdout(output), redirect_stderr(output):
+                self.assertEqual(generator.main(), 1)
+            self.assertEqual(
+                output.getvalue(),
+                "error: README configuration inventory is stale; run python3 tools/generate_readme_config.py\n",
+            )
         finally:
             sys.argv = original_argv
 
