@@ -1,4 +1,7 @@
 {
+  "labelFormat": "{date} {name}",
+  "dateFormat": "EEE MM/dd",
+  "uppercaseDate": true,
   "sessions": [
     {"name": "PEAK", "start": "09:00", "end": "17:00"},
     {"name": "PERSONAL", "start": "17:00", "end": "23:00"},

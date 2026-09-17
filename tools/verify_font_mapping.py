@@ -19,7 +19,6 @@ NOVA_MONO_SHA256 = "648eadb6648c0801b186d3dcef60ee6aa84a791b1e09c726935c0712508b
 MARKER = ROOT / "watchface/src/main/res/drawable-nodpi/session_current_marker.png"
 MARKER_SHA256 = "5e385773f58d25179acf8fe7ce0a86bdff705608a74754c0c5f8c5015d287144"
 HOUR_INDICATOR_FORMULA = "[HOUR_0_11] * 30 + [MINUTE] * 0.5"
-FACE_RADIUS = 225.0
 # The face is physical r=225. The arc's r=216.5 outer edge is deliberately
 # joined by the marker's r=217 apex, rather than being the old global limit.
 SESSION_SAFE_INK_RADIUS = 217.2
@@ -28,13 +27,13 @@ SESSION_SAFE_INK_RADIUS = 217.2
 # substituting the largest row's box for both is an inaccurate metric claim.
 HOURS_ROW_INK = (243, 118)       # `00h` at 158px
 MINUTES_ROW_INK = (250, 117)     # `00m` at 158px
+SESSION_LABEL_INK_HEIGHT = 19   # session label at 26px
 # Approved conservative painted-ink envelope for each shipped 24px session
 # time string. It is a verifier pin, not a renderer-specific precision claim.
 # Do not substitute synthetic SEMI_BOLD: the bundled file is Regular (OS/2 400).
 CURRENT_TIME_INK = (66, 19)
 WORST_ENDPOINT_INK = (66, 19)
 SESSION_FADED_COLOR = "#cccccc"
-SESSION_OPTICAL_OFFSET = (4.0, -4.0)
 CURRENT_TRAIL = 0.0
 CURRENT_PATH_SPAN = 22.0
 MARKER_TO_CURRENT_INK_CLEARANCE = 0.0
@@ -48,7 +47,26 @@ _schedule_module = importlib.util.spec_from_file_location(
 assert _schedule_module and _schedule_module.loader
 _schedule = importlib.util.module_from_spec(_schedule_module)
 _schedule_module.loader.exec_module(_schedule)
-_rows = _schedule.schedule()
+FACE_RADIUS = _schedule.FACE_SIZE / 2
+SESSION_OPTICAL_OFFSET = _schedule.SESSION_OPTICAL_OFFSET
+_rows, _label_format, _date_format, _uppercase_date = _schedule.load()
+_date_tokens = _date_format.split()
+_date_slot = " ".join("%s" for _ in _date_tokens)
+# Independent English tables pin every numeric name branch and its casing.
+_date_names = {
+    "MMM": "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(),
+    "EEE": "Sun Mon Tue Wed Thu Fri Sat".split(),
+}
+_date_parameters = []
+for token in _date_tokens:
+    expression = f'icuText("{token}", [UTC_TIMESTAMP])'
+    if token in _date_names:
+        field, base = {"EEE": ("DAY_OF_WEEK", _schedule.DAY_OF_WEEK_SUNDAY), "MMM": ("MONTH", 1)}[token]
+        expression = "".join(
+            f'[{field}] == {index} ? "{name.upper() if _uppercase_date else name}" : '
+            for index, name in enumerate(_date_names[token], base)
+        ) + '""'
+    _date_parameters.append(expression)
 
 
 def _endpoint_angle(end: int) -> int:
@@ -301,18 +319,22 @@ def assert_zero_padded_countdown(expression: str, operator: str) -> None:
 
 
 def assert_session_part_containment(part: ET.Element) -> None:
-    """Pin each central raster, including its intentional x=4 blank overrun."""
+    """Pin face-width labels and the numerals' intentional blank overrun."""
     expected = {
         "session_countdown_hours": (4.0, 64.0, 450.0, 158.0),
         "session_countdown_minutes": (4.0, 222.0, 450.0, 158.0),
-        **{f"session_countdown_{row['key']}": (4.0, 217.0, 450.0, 26.0)
+        **{f"session_countdown_{row['key']}": (
+               _schedule.SESSION_LABEL_X, _schedule.SESSION_LABEL_Y,
+               _schedule.SESSION_LABEL_WIDTH, _schedule.SESSION_LABEL_HEIGHT)
            for row in _rows},
     }
     geometry = tuple(float(part.get(key)) for key in ("x", "y", "width", "height"))
     assert geometry == expected[part.get("name")], (part.get("name"), geometry)
-    # x=4,width=450 deliberately makes blank raster reach x=454; actual ink
-    # from this center is separately proved inside the circular display.
-    assert geometry[0] + geometry[2] == FACE_RADIUS * 2 + SESSION_OPTICAL_OFFSET[0]
+    if part.get("name") in {"session_countdown_hours", "session_countdown_minutes"}:
+        # Numeral blank overrun is intentional; actual ink is proved separately.
+        assert geometry[0] + geometry[2] == FACE_RADIUS * 2 + SESSION_OPTICAL_OFFSET[0]
+    else:
+        assert geometry[0] + geometry[2] == _schedule.SESSION_LABEL_X + _schedule.SESSION_LABEL_WIDTH == _schedule.FACE_SIZE
 
 
 def radius_for_box(half_width: float, y_from_center: float) -> float:
@@ -435,12 +457,16 @@ def assert_approved_session_faded_color(color: str) -> None:
 
 
 def assert_session_countdown_centering(parts: list[ET.Element]) -> None:
-    """All generated central rasters share the specified optical shift."""
+    """Centre labels geometrically; retain the large numerals' optical shift."""
     assert len(parts) == len(_rows) + 2
     for part in parts:
-        baseline_y = {"session_countdown_hours": 68, "session_countdown_minutes": 226}.get(part.get("name"), 221)
-        assert float(part.get("x")) + float(part.get("width")) / 2 == FACE_RADIUS + SESSION_OPTICAL_OFFSET[0]
-        assert float(part.get("y")) == baseline_y + SESSION_OPTICAL_OFFSET[1]
+        baseline_y = {"session_countdown_hours": 68, "session_countdown_minutes": 226}.get(part.get("name"))
+        if baseline_y is not None:
+            assert float(part.attrib["x"]) + float(part.attrib["width"]) / 2 == FACE_RADIUS + SESSION_OPTICAL_OFFSET[0]
+            assert float(part.attrib["y"]) == baseline_y + SESSION_OPTICAL_OFFSET[1]
+        else:
+            assert float(part.attrib["x"]) + float(part.attrib["width"]) / 2 == FACE_RADIUS
+            assert float(part.attrib["y"]) + float(part.attrib["height"]) / 2 == FACE_RADIUS
 
 
 def assert_stacked_countdown_ink(hours: ET.Element, minutes: ET.Element) -> None:
@@ -471,8 +497,7 @@ def assert_session_text_ink_containment(countdown: dict[str, ET.Element]) -> Non
     """Prove measured/conservative session text ink stays in the safe circle.
 
     ImageMagick/FreeType independently measures hash-pinned Nova Mono `00h`
-    at 158px as 243×118px and `00m` as 250×117px, and the widest session label,
-    `TRANSITION`, at 26px as 149×19px. These conservative bounds prove ink
+    at 158px as 243×118px and `00m` as 250×117px. Conservative label bounds prove ink
     containment rather than treating blank PartText raster corners as visible
     ink.
     """
@@ -484,6 +509,19 @@ def assert_session_text_ink_containment(countdown: dict[str, ET.Element]) -> Non
         ink_x = float(part.get("x")) + float(part.get("width")) / 2 - FACE_RADIUS
         ink_y = float(part.get("y")) + float(part.get("height")) / 2 - FACE_RADIUS
         assert radius_for_box(abs(ink_x) + ink_width / 2, abs(ink_y) + ink_height / 2) <= SESSION_SAFE_INK_RADIUS < FACE_RADIUS
+    # Derive name widths from the configured tables/case. Numeric ICU budgets
+    # cover the old and new defaults; other patterns need a measured budget.
+    # WED 12/30 PERSONAL is 17 chars: 265.2px ignoring negative letterSpacing.
+    date_widths = {"d": 2, "MM/dd": 5} | {
+        token: max(len(upper if _uppercase_date else name) for name, upper in names.items())
+        for token, names in _schedule.UPPERCASE_DATE_NAMES.items()
+    }
+    assert set(_date_tokens) <= date_widths.keys(), "date format needs a verified width budget"
+    bounded_date = " ".join("0" * date_widths[token] for token in _date_tokens)
+    label_half_width = max(
+        len(_label_format.replace("{date}", bounded_date).replace("{name}", row["name"]))
+        for row in _rows
+    ) * 26 * 0.6 / 2
     for name in {
         f"session_countdown_{row['key']}"
         for row in _rows
@@ -491,7 +529,8 @@ def assert_session_text_ink_containment(countdown: dict[str, ET.Element]) -> Non
         part = countdown[name]
         ink_x = float(part.get("x")) + float(part.get("width")) / 2 - FACE_RADIUS
         ink_y = float(part.get("y")) + float(part.get("height")) / 2 - FACE_RADIUS
-        assert radius_for_box(abs(ink_x) + 74.5, abs(ink_y) + 9.5) <= SESSION_SAFE_INK_RADIUS < FACE_RADIUS
+        ink_radius = radius_for_box(abs(ink_x) + label_half_width, abs(ink_y) + SESSION_LABEL_INK_HEIGHT / 2)
+        assert ink_radius <= SESSION_SAFE_INK_RADIUS < FACE_RADIUS, (name, label_half_width, ink_radius, SESSION_SAFE_INK_RADIUS)
 
 
 def render_countdown_template(template: str, value: str) -> str:
@@ -662,10 +701,11 @@ def main() -> int:
         assert font is not None and font.attrib == {"color": "#ffffff", "family": "nova_mono", "size": "158", "weight": "NORMAL", "letterSpacing": "-0.05"}
     # Measured 158px row ink: centred rows are contained by the safe circle,
     # rather than by a vacuous full-width PartText raster check.
-    assert [(float(p.get("y")) + (float(p.get("height")) - ink[1]) / 2,
+    row_ink_bounds = [(float(p.get("y")) + (float(p.get("height")) - ink[1]) / 2,
               float(p.get("y")) + (float(p.get("height")) + ink[1]) / 2)
              for p, ink in ((countdown["session_countdown_hours"], HOURS_ROW_INK),
-                            (countdown["session_countdown_minutes"], MINUTES_ROW_INK))] == [(84, 202), (242.5, 359.5)]
+                            (countdown["session_countdown_minutes"], MINUTES_ROW_INK))]
+    assert row_ink_bounds == [(84, 202), (242.5, 359.5)]
     label_condition = next(
         (condition for condition in root.findall(".//Scene/Condition")
          if condition.find("Default/PartText") is not None
@@ -696,21 +736,27 @@ def main() -> int:
         part = label_bindings[expression_name]
         assert part is not None and part.get("name") == expected_name
         assert part is countdown[expected_name]
-        assert part.find("Text/Font").text == label
-        assert part.find("Text/Font/Template") is None
+        assert part.find("Text/Font/Template").text == _label_format.replace("{date}", _date_slot).replace("{name}", label)
+        assert parameters(part.find("Text")) == _date_parameters
     default_part = label_condition.find("Default/PartText")
     assert default_part is countdown[f"session_countdown_{_rows[-1]['key']}"]
-    assert default_part.find("Text/Font").text == _rows[-1]["name"]
-    assert default_part.find("Text/Font/Template") is None
-    # The 26px label's measured 19px ink is centred in the 40.5px row gap:
-    # y=220.5..239.5 leaves 18.5px below hours and exactly 3px above minutes.
-    label_ink_top = float(default_part.get("y")) + (float(default_part.get("height")) - 19) / 2
-    assert label_ink_top - 202 == 18.5
-    assert 242.5 - (label_ink_top + 19) == 3
+    assert default_part.find("Text/Font/Template").text == _label_format.replace("{date}", _date_slot).replace("{name}", _rows[-1]["name"])
+    assert parameters(default_part.find("Text")) == _date_parameters
+    # Label ink is centred on the face midline, not the row-gap midpoint;
+    # the measured ink must still fit entirely between the numeral inks.
+    label_ink_top = float(default_part.get("y")) + (float(default_part.get("height")) - SESSION_LABEL_INK_HEIGHT) / 2
+    label_ink_bottom = label_ink_top + SESSION_LABEL_INK_HEIGHT
+    label_center = _schedule.SESSION_LABEL_Y + _schedule.SESSION_LABEL_HEIGHT / 2
+    assert label_center == FACE_RADIUS
+    hours_ink_bottom, minutes_ink_top = row_ink_bounds[0][1], row_ink_bounds[1][0]
+    assert label_ink_top == label_center - SESSION_LABEL_INK_HEIGHT / 2
+    assert label_ink_bottom == label_center + SESSION_LABEL_INK_HEIGHT / 2
+    assert label_ink_top - hours_ink_bottom == label_center - SESSION_LABEL_INK_HEIGHT / 2 - hours_ink_bottom >= 0
+    assert minutes_ink_top - label_ink_bottom == minutes_ink_top - label_center - SESSION_LABEL_INK_HEIGHT / 2 >= 0
     for row in _rows:
         name, label = f"session_countdown_{row['key']}", row["name"]
-        assert countdown[name].find("Text/Font").text == label
-        assert countdown[name].find("Text/Font/Template") is None
+        assert countdown[name].find("Text/Font/Template").text == _label_format.replace("{date}", _date_slot).replace("{name}", label)
+        assert parameters(countdown[name].find("Text")) == _date_parameters
     # Custom schedules have been structurally verified above; the remaining
     # geometry sweep is the shipped-default-only invariant set.
     default_schedule = [(row["start"], row["end"], row["name"]) for row in _rows] == [

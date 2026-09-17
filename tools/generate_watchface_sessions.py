@@ -6,11 +6,38 @@ import argparse
 import json
 import re
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "config/watchface-sessions.json"
 TEMPLATE = ROOT / "watchface/src/main/watchface-template.xml"
 GENERATED = ROOT / "watchface/build/generated/session-res/raw/watchface.xml"
+FACE_SIZE = 450
+FACE_RADIUS = FACE_SIZE / 2
+SESSION_LABEL_HEIGHT = 26
+SESSION_LABEL_WIDTH = FACE_SIZE
+# Bearing calibration for the 158px numerals only. The 26px label is
+# deliberately centred geometrically: this nudge is calibrated for large ink.
+SESSION_OPTICAL_OFFSET = (4.0, -4.0)
+DEFAULT_LABEL_FORMAT = "{date} {name}"
+DEFAULT_DATE_FORMAT = "EEE MM/dd"
+DEFAULT_UPPERCASE_DATE = True
+# WFF [DAY_OF_WEEK] base: this watch uses 1 = Sunday (Thursday reported 5).
+DAY_OF_WEEK_SUNDAY = 1
+UPPERCASE_DATE_NAMES = {
+    "MMM": {"Jan": "JAN", "Feb": "FEB", "Mar": "MAR", "Apr": "APR",
+            "May": "MAY", "Jun": "JUN", "Jul": "JUL", "Aug": "AUG",
+            "Sep": "SEP", "Oct": "OCT", "Nov": "NOV", "Dec": "DEC"},
+    "EEE": {"Sun": "SUN", "Mon": "MON", "Tue": "TUE", "Wed": "WED",
+            "Thu": "THU", "Fri": "FRI", "Sat": "SAT"},
+}
+
+
+def session_label_position() -> tuple[float, float]:
+    return (FACE_SIZE - SESSION_LABEL_WIDTH) / 2, (FACE_SIZE - SESSION_LABEL_HEIGHT) / 2
+
+
+SESSION_LABEL_X, SESSION_LABEL_Y = session_label_position()
 
 
 def parse_time(value: object, *, allow_24: bool = False) -> int:
@@ -21,7 +48,7 @@ def parse_time(value: object, *, allow_24: bool = False) -> int:
     return hour * 60 + minute
 
 
-def schedule(path: Path = CONFIG) -> list[dict]:
+def load(path: Path = CONFIG) -> tuple[list[dict], str, str, bool]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
@@ -76,7 +103,16 @@ def schedule(path: Path = CONFIG) -> list[dict]:
                 raise ValueError(f"gap/overlap between {previous['name']} and {current['name']} at {previous['end'] // 60:02d}:00")
         if overnight["end"] != first["start"]:
             raise ValueError(f"overnight session must end at the first start boundary ({first['start'] // 60:02d}:00) to close the day")
-    return result
+    label_format = data.get("labelFormat", DEFAULT_LABEL_FORMAT)
+    if not isinstance(label_format, str) or label_format.count("{date}") != 1 or label_format.count("{name}") != 1:
+        raise ValueError("labelFormat must be a string containing exactly one {date} and exactly one {name}")
+    date_format = data.get("dateFormat", DEFAULT_DATE_FORMAT)
+    if not isinstance(date_format, str) or not date_format:
+        raise ValueError("dateFormat must be a non-empty string")
+    uppercase_date = data.get("uppercaseDate", DEFAULT_UPPERCASE_DATE)
+    if not isinstance(uppercase_date, bool):
+        raise ValueError("uppercaseDate must be a bool")
+    return result, label_format, date_format, uppercase_date
 
 
 def condition(row: dict) -> str:
@@ -121,7 +157,7 @@ def endpoint_block(rows: list[dict]) -> tuple[str, str]:
         part_name = f"{base_part_name}_{index}"
         text = f"{end // 60:02d}:00" if end < 1440 else "24:00"
         direction = "CLOCKWISE" if clockwise else "COUNTER_CLOCKWISE"
-        part = f'<PartText name="{part_name}" width="450" height="450" x="0" y="0" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><TextCircular centerX="225" centerY="225" width="406" height="406" startAngle="{start:g}" endAngle="{finish:g}" direction="{direction}" align="CENTER"><Font color="#cccccc" family="nova_mono" size="24" weight="NORMAL" letterSpacing="-0.05">{text}</Font></TextCircular></PartText>'
+        part = f'<PartText name="{part_name}" width="{FACE_SIZE:g}" height="{FACE_SIZE:g}" x="0" y="0" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><TextCircular centerX="{FACE_RADIUS:g}" centerY="{FACE_RADIUS:g}" width="406" height="406" startAngle="{start:g}" endAngle="{finish:g}" direction="{direction}" align="CENTER"><Font color="#cccccc" family="nova_mono" size="24" weight="NORMAL" letterSpacing="-0.05">{text}</Font></TextCircular></PartText>'
         parts.append((expression_name, part))
     if len(rows) == 1:
         # WFF v2 requires an Expressions/Compare pair even when the single
@@ -139,17 +175,43 @@ def endpoint_block(rows: list[dict]) -> tuple[str, str]:
     return "\n                        ".join(expressions), compares
 
 
-def render(source: str, rows: list[dict]) -> str:
+def label_part(row: dict, label_format: str, date_format: str, uppercase_date: bool = DEFAULT_UPPERCASE_DATE) -> str:
+    tokens = date_format.split()
+    label = escape(label_format.replace("{name}", row["name"]).replace("{date}", " ".join("%s" for _ in tokens)))
+    parameters = []
+    for token in tokens:
+        expression = f'icuText("{token}", [UTC_TIMESTAMP])'
+        names = UPPERCASE_DATE_NAMES.get(token, {})
+        if names:
+            field, base = {"EEE": ("DAY_OF_WEEK", DAY_OF_WEEK_SUNDAY), "MMM": ("MONTH", 1)}[token]
+            expression = "".join(
+                f'[{field}] == {index} ? "{upper if uppercase_date else name}" : '
+                for index, (name, upper) in enumerate(names.items(), base)
+            ) + '""'
+        escaped_expression = escape(expression, {'"': "&quot;"})
+        parameters.append(f'<Parameter expression="{escaped_expression}"/>')
+    x, y = session_label_position()
+    return (
+        f'<PartText name="session_countdown_{row["key"]}" width="{SESSION_LABEL_WIDTH:g}" height="{SESSION_LABEL_HEIGHT:g}" x="{x:g}" y="{y:g}" alpha="0">'
+        '<Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/>'
+        '<Text align="CENTER"><Font color="#cccccc" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">'
+        f'<Template>{label}{"".join(parameters)}</Template></Font></Text></PartText>'
+    )
+
+
+def render(source: str, rows: list[dict], label_format: str = DEFAULT_LABEL_FORMAT, date_format: str = DEFAULT_DATE_FORMAT, uppercase_date: bool = DEFAULT_UPPERCASE_DATE) -> str:
     # Last is Default; every preceding row gets its own indexed identifier.
     expressions = "\n                ".join(
         f'<Expression name="is_{row["key"]}"><![CDATA[{condition(row)}]]></Expression>' for row in rows[:-1]
     )
     compares = "\n            ".join(
-        f'<Compare expression="is_{row["key"]}"><PartText name="session_countdown_{row["key"]}" width="450" height="26" x="4" y="217" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#cccccc" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">{row["name"]}</Font></Text></PartText></Compare>'
+        f'<Compare expression="is_{row["key"]}">{label_part(row, label_format, date_format, uppercase_date)}</Compare>'
         for row in rows[:-1]
     )
     last = rows[-1]
-    compares += f'\n            <Default><PartText name="session_countdown_{last["key"]}" width="450" height="26" x="4" y="217" alpha="0"><Variant mode="AMBIENT" target="alpha" value="[CONFIGURATION.aod] == 3 ? 255 : 0"/><Text align="CENTER"><Font color="#cccccc" family="nova_mono" size="26" weight="NORMAL" letterSpacing="-0.05">{last["name"]}</Font></Text></PartText></Default>'
+    compares += f'\n            <Default>{label_part(last, label_format, date_format, uppercase_date)}</Default>'
+    # Config text is literal, not a regex replacement escape or backreference.
+    compares = compares.replace("\\", r"\\")
     label_pattern = re.compile(r"(<!-- Condition owns time-varying label selection; Variant only gates AOD mode\. -->\n        <Condition>\n            <Expressions>\n).*?(\n            </Expressions>).*?(\n        </Condition>)", re.S)
     if len(rows) == 1:
         expressions = f'<Expression name="is_{last["key"]}"><![CDATA[1 == 1]]></Expression>'
@@ -206,7 +268,8 @@ def main() -> int:
     args = parser.parse_args()
     try:
         template = TEMPLATE.read_text(encoding="utf-8")
-        generated = render(template, schedule(args.config))
+        rows, label_format, date_format, uppercase_date = load(args.config)
+        generated = render(template, rows, label_format, date_format, uppercase_date)
         current = args.output.read_text(encoding="utf-8") if args.output.exists() else ""
         if args.check and current != generated:
             print("error: generated watchface.xml is stale; run python3 tools/generate_watchface_sessions.py", flush=True)
