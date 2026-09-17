@@ -4,7 +4,7 @@ This is a configurable derivative of an upstream WFF2 watch face for Wear OS 5+.
 
 ## Quick start
 
-1. Edit [`config/watchface-sessions.json`](config/watchface-sessions.json). The `sessions` array must contain exactly `name`, `start`, and `end` in `HH:MM`; schedules must be ordered, contiguous, and cover 24 hours. An overnight entry such as `22:00`→`06:00` may be last.
+1. Edit [`config/watchface-sessions.json`](config/watchface-sessions.json). The `sessions` array must contain exactly `name`, `start`, and `end` in `HH:MM`; schedules must be ordered, contiguous, and cover 24 hours. An overnight entry such as `22:00`→`06:00` may be last. Optional top-level `labelFormat` (default `"{date} {name}"`), `dateFormat` (default `"EEE MM/dd"`), and `uppercaseDate` (boolean, default `true`) configure the session row, for example `THU 09/17 PEAK`. Date formats split on whitespace into one parameter per token: `EEE`/`MMM` select English names from numeric `[DAY_OF_WEEK]`/`[MONTH]` fields; `uppercaseDate: false` selects original-case names. Every other token, including `MM/dd`, stays in ICU. The verifier bounds the configured name tables and the `d`/`MM/dd` numeric tokens; other ICU patterns require a verified width budget.
 2. Validate and generate the WFF resource:
 
    ```sh
