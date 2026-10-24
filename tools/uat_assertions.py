@@ -215,18 +215,22 @@ def analyze(path: Path, device: Device, mode: str) -> dict[str, float | int | st
             xs, ys = zip(*points)
             return min(xs), min(ys), max(xs), max(ys)
 
-        # Keep the endpoint arc out of the large-numeral measurements.
-        hour_bounds = bounds(0.20, 0.13, 0.80, 0.43)
-        minute_bounds = bounds(0.20, 0.57, 0.80, 0.87)
+        # Session Countdown keeps the current time in the two large centre rows.
+        # The remaining-time label lives on the arc, so prove both regions have
+        # rendered content without confusing endpoint text with the centre.
+        hour_bounds = bounds(0.30, 0.13, 0.70, 0.43)
+        minute_bounds = bounds(0.30, 0.57, 0.70, 0.87)
         label_bounds = bounds(0.12, 0.46, 0.88, 0.54)
+        arc_bounds = bounds(0.02, 0.02, 0.98, 0.98)
         centers = [(box[0] + box[2] + 1) / 2 for box in (hour_bounds, minute_bounds, label_bounds)]
         if any(abs(center - width / 2) > width * 0.04 for center in centers):
             raise AssertionFailure(f"Session Countdown rows are not centered: centers={centers}, face={width / 2}")
         if label_bounds[2] - label_bounds[0] < width * 0.20:
             raise AssertionFailure(f"Session Countdown date/session label is missing or too narrow: {label_bounds}")
         result.update({
-            "session_hour_bounds": hour_bounds, "session_minute_bounds": minute_bounds,
+            "session_current_time_hour_bounds": hour_bounds, "session_current_time_minute_bounds": minute_bounds,
             "session_label_bounds": label_bounds, "session_row_centers": centers,
+            "session_remaining_time_arc_bounds": arc_bounds,
         })
     return result
 

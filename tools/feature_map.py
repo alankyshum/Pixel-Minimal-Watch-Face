@@ -118,7 +118,11 @@ def discover_entry_points() -> list[str]:
     if watchface.find(".//Variant[@mode='AMBIENT']") is not None:
         entries.add("watchface:ambient")
     session_option = watchface.find("./UserConfigurations/ListConfiguration[@id='aod']/ListOption[@id='3']")
-    if session_option is not None and watchface.find(".//PartText[@name='session_countdown_hours']") is not None:
+    if session_option is not None and any(
+        time.get("hourFormat") == "SYNC_TO_DEVICE"
+        and time.find("Variant[@mode='AMBIENT'][@value='[CONFIGURATION.aod] == 3 ? 255 : 0']") is not None
+        for time in watchface.findall(".//TimeText")
+    ):
         entries.add("watchface:aod-style:session-countdown")
     entries.update(f"watchface:font:{family}" for family in {font.get("family") for font in watchface.findall(".//Font")} if family)
 

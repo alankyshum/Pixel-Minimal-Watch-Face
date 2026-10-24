@@ -107,6 +107,9 @@ class UatAssertionsTests(unittest.TestCase):
         write_png(image, 100, 100, pixel)
         report = uat.analyze(image, self.device, "session-countdown")
         self.assertEqual(report["session_row_centers"], [50.0, 50.0, 50.0])
+        self.assertIn("session_current_time_hour_bounds", report)
+        self.assertIn("session_current_time_minute_bounds", report)
+        self.assertIn("session_remaining_time_arc_bounds", report)
 
     def test_off_center_session_countdown_fails(self) -> None:
         image = self.root / "off-center-session.png"

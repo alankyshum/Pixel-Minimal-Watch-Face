@@ -7,12 +7,12 @@ paths: ["config/watchface-sessions.json", "tools/generate_watchface_sessions.py"
 ---
 # Configurable Session Countdown AOD
 
-Generates the opt-in `aod=3` ambient style from a contiguous 24-hour session schedule. It shows the remaining hours and minutes, current time, endpoint labels and arc, plus a centered date/session label.
+Generates the opt-in `aod=3` ambient style from a contiguous 24-hour session schedule. It shows the current time in the large center rows, zero-padded remaining time (`XXhYYm`) on the arc, endpoint labels and arc, plus a centered date/session label.
 
 ## Sub-features
 - Validated ordered session names and whole-hour boundaries, including one overnight segment.
 - Configurable date/name label formatting and English uppercase weekday/month names.
-- Generated countdown expressions, active endpoint marker, and safe centered geometry.
+- Generated arc countdown expressions, sync-to-device center time, active endpoint marker, and safe centered geometry.
 
 ## How to reach it
 - Select **Session Countdown** under **AOD Style** in the system watch-face editor, then let the watch enter ambient mode.

@@ -11,7 +11,7 @@ Provides the resource-only Wear OS 5+ face: a large digital clock, five configur
 
 ## Sub-features
 - Center Nova Mono clock; circular date/timer slots; two curved top text slots and adaptive bottom text.
-- Dimmed, time-only, and Session Countdown ambient modes, with visibility controlled by WFF variants.
+- Dimmed, time-only, and Session Countdown ambient modes, with visibility controlled by WFF variants; Session Countdown keeps sync-to-device current time in the center rows.
 - Theme and clock colors, complication text sizes, hour animation, and preset flavors.
 
 ## How to reach it
