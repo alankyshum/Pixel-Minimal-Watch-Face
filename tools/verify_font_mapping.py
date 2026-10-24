@@ -458,7 +458,7 @@ def assert_approved_session_faded_color(color: str) -> None:
 
 def assert_session_countdown_centering(parts: list[ET.Element]) -> None:
     """Centre labels geometrically; retain the large numerals' optical shift."""
-    assert len(parts) == len(_rows) + 2
+    assert len(parts) == len(_rows)
     for part in parts:
         baseline_y = {"session_countdown_hours": 68, "session_countdown_minutes": 226}.get(part.get("name"))
         if baseline_y is not None:
@@ -609,7 +609,7 @@ def main() -> int:
         else:
             raise AssertionError("session faded-color mutation survived")
     assert all(e.get("direction") in {"CLOCKWISE", "COUNTER_CLOCKWISE"} for e in root.iter() if e.get("direction"))
-    clock_fonts = root.findall(".//DigitalClock//Font")
+    clock_fonts = root.findall(".//DigitalClock")[0].findall(".//Font")
     assert len(clock_fonts) == 4 and all(f.attrib == {"color":"#fafafa", "size":"112", "family":"nova_mono", "weight":"NORMAL"} for f in clock_fonts)
     slots = {slot.get("slotId"): slot for slot in root.findall(".//ComplicationSlot")}
     assert set(slots) == {"0", "1", "2", "3", "4"}
@@ -630,7 +630,7 @@ def main() -> int:
         for part in root.findall(".//PartText")
         if (part.get("name") or "").startswith("session_countdown_")
     }
-    assert len(session_fonts) == len(_rows) + 2
+    assert len(session_fonts) == len(_rows)
     assert all(font is not None and font.get("letterSpacing") == "-0.05" for font in session_fonts)
     assert all(font.get("color") == SESSION_FADED_COLOR for font in session_fonts
                if font is not None and font.text in {row["name"] for row in _rows})
@@ -664,10 +664,10 @@ def main() -> int:
     for time_text in clock.findall("TimeText"):
         variant = time_text.find("Variant")
         assert variant is not None and variant.get("mode") == "AMBIENT"
-        assert variant.get("value", "").startswith("[CONFIGURATION.aod] == 3 ? 0 : ")
+        assert variant.get("value", "").startswith("[CONFIGURATION.aod] == 3 ? 0 : ") or variant.get("value") == "[CONFIGURATION.aod] == 3 ? 255 : 0"
 
     countdown = {part.get("name"): part for part in root.findall(".//PartText") if (part.get("name") or "").startswith("session_countdown_")}
-    expected_session_names = {"session_countdown_hours", "session_countdown_minutes"} | {
+    expected_session_names = {
         f"session_countdown_{row['key']}"
         for row in _rows
     }
@@ -678,34 +678,17 @@ def main() -> int:
         assert variant is not None and variant.attrib == {"mode": "AMBIENT", "target": "alpha", "value": "[CONFIGURATION.aod] == 3 ? 255 : 0"}
         assert_session_part_containment(part)
     assert_session_countdown_centering(list(countdown.values()))
-    absurd_width = ET.fromstring(ET.tostring(countdown["session_countdown_hours"]))
-    absurd_width.set("width", "600")
-    try:
-        assert_session_part_containment(absurd_width)
-    except AssertionError:
-        pass
-    else:
-        raise AssertionError("absurd central PartText width survived")
-    hours_template = countdown["session_countdown_hours"].find("Text/Font/Template").text
-    minutes_template = countdown["session_countdown_minutes"].find("Text/Font/Template").text
-    assert hours_template == "%sh"
-    assert minutes_template == "%sm"
-    hours_expression = countdown["session_countdown_hours"].find("Text/Font/Template/Parameter").get("expression")
-    minutes_expression = countdown["session_countdown_minutes"].find("Text/Font/Template/Parameter").get("expression")
-    assert_zero_padded_countdown(hours_expression, "/")
-    assert_zero_padded_countdown(minutes_expression, "%")
-    assert_stacked_countdown_ink(countdown["session_countdown_hours"], countdown["session_countdown_minutes"])
-    assert_session_text_ink_containment(countdown)
-    for part in (countdown["session_countdown_hours"], countdown["session_countdown_minutes"]):
-        font = part.find("Text/Font")
-        assert font is not None and font.attrib == {"color": "#ffffff", "family": "nova_mono", "size": "158", "weight": "NORMAL", "letterSpacing": "-0.05"}
-    # Measured 158px row ink: centred rows are contained by the safe circle,
-    # rather than by a vacuous full-width PartText raster check.
-    row_ink_bounds = [(float(p.get("y")) + (float(p.get("height")) - ink[1]) / 2,
-              float(p.get("y")) + (float(p.get("height")) + ink[1]) / 2)
-             for p, ink in ((countdown["session_countdown_hours"], HOURS_ROW_INK),
-                            (countdown["session_countdown_minutes"], MINUTES_ROW_INK))]
-    assert row_ink_bounds == [(84, 202), (242.5, 359.5)]
+    session_center_time = [time for time in root.findall(".//TimeText")
+                           if time.find("Variant").get("value") == "[CONFIGURATION.aod] == 3 ? 255 : 0"]
+    assert len(session_center_time) == 2
+    assert [(time.get("format"), time.get("hourFormat"), time.get("align"), time.get("x"), time.get("y"), time.get("width"), time.get("height"))
+            for time in session_center_time] == [
+                ("hh", "SYNC_TO_DEVICE", "CENTER", "4", "64", "450", "158"),
+                ("mm", "SYNC_TO_DEVICE", "CENTER", "4", "222", "450", "158"),
+            ]
+    assert all(time.get("alpha") == "0" and time.find("Font").attrib == {
+        "color": "#ffffff", "family": "nova_mono", "size": "158", "weight": "NORMAL"}
+        for time in session_center_time)
     label_condition = next(
         (condition for condition in root.findall(".//Scene/Condition")
          if condition.find("Default/PartText") is not None
@@ -748,7 +731,7 @@ def main() -> int:
     label_ink_bottom = label_ink_top + SESSION_LABEL_INK_HEIGHT
     label_center = _schedule.SESSION_LABEL_Y + _schedule.SESSION_LABEL_HEIGHT / 2
     assert label_center == FACE_RADIUS
-    hours_ink_bottom, minutes_ink_top = row_ink_bounds[0][1], row_ink_bounds[1][0]
+    hours_ink_bottom, minutes_ink_top = 202, 242.5
     assert label_ink_top == label_center - SESSION_LABEL_INK_HEIGHT / 2
     assert label_ink_bottom == label_center + SESSION_LABEL_INK_HEIGHT / 2
     assert label_ink_top - hours_ink_bottom == label_center - SESSION_LABEL_INK_HEIGHT / 2 - hours_ink_bottom >= 0
@@ -844,7 +827,15 @@ def main() -> int:
     assert all(part.get("alpha") == "0" and part.find("Variant").get("value") == "[CONFIGURATION.aod] == 3 ? 255 : 0"
                for part in current_parts.values())
     current_texts = {key: part.find("TextCircular") for key, part in current_parts.items()}
-    assert all(text is not None and parameters(text) == ['icuText("HH:mm", [UTC_TIMESTAMP])'] for text in current_texts.values())
+    assert all(text is not None and text.find("Font/Template").text == "%sh%sm" for text in current_texts.values())
+    current_expressions = {
+        key: [parameter.get("expression") for parameter in text.findall("Font/Template/Parameter")]
+        for key, text in current_texts.items()
+    }
+    assert all(len(expressions) == 2 for expressions in current_expressions.values())
+    for expressions in current_expressions.values():
+        assert_zero_padded_countdown(expressions[0], "/")
+        assert_zero_padded_countdown(expressions[1], "%")
     assert {key: text.get("direction") for key, text in current_texts.items()} == {"upper": "CLOCKWISE", "lower": "COUNTER_CLOCKWISE"}
     for text in current_texts.values():
         assert {key: text.get(key) for key in ("centerX", "centerY", "width", "height", "startAngle", "endAngle", "align")} == {"centerX": "225", "centerY": "225", "width": "380", "height": "380", "startAngle": "0", "endAngle": "0", "align": "CENTER"}
@@ -953,12 +944,12 @@ def main() -> int:
             expected_hours, expected_minutes, expected_label, expected_end = specified_session(hour, minute)
             if expected_label == "SLEEP":
                 sleep_minutes += 1
-            actual_hours = evaluate_wff(hours_expression, hour, minute)
-            actual_minutes = evaluate_wff(minutes_expression, hour, minute)
+            expressions = current_expressions["lower" if bool(evaluate_wff(current_lower_expression.text, hour, minute)) else "upper"]
+            actual_hours = evaluate_wff(expressions[0], hour, minute)
+            actual_minutes = evaluate_wff(expressions[1], hour, minute)
             assert actual_hours == f"{expected_hours:02d}", (hour, minute, "hours", actual_hours)
             assert actual_minutes == f"{expected_minutes:02d}", (hour, minute, "minutes", actual_minutes)
-            assert render_countdown_template(hours_template, actual_hours) == f"{expected_hours:02d}h", (hour, minute)
-            assert render_countdown_template(minutes_template, actual_minutes) == f"{expected_minutes:02d}m", (hour, minute)
+            assert "".join(("%sh%sm")).replace("%s", actual_hours, 1).replace("%s", actual_minutes, 1) == f"{expected_hours:02d}h{expected_minutes:02d}m", (hour, minute)
             selected = [name for name, source in label_expressions.items() if evaluate_wff(source, hour, minute)]
             assert len(selected) <= 1, (hour, minute, selected)
             selected_part = label_bindings[selected[0]] if selected else default_part

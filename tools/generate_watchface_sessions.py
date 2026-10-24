@@ -239,10 +239,10 @@ def render(source: str, rows: list[dict], label_format: str = DEFAULT_LABEL_FORM
     source, count = countdown_pattern.subn(
         lambda match: f'expression="numberFormat(&quot;00&quot;, floor(({escaped_end}) {match.group(1)} 60))"',
         source,
-        count=2,
+        count=4,
     )
-    if count != 2:
-        raise ValueError(f"expected exactly two countdown expressions, found {count}")
+    if count != 4:
+        raise ValueError(f"expected exactly four arc countdown expressions, found {count}")
 
     # 12:00 and 24:00 normalize to 360; other boundaries use their hour angle.
     def arc_endpoint(row: dict) -> int:

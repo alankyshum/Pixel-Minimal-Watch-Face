@@ -201,6 +201,39 @@ class SessionGeneratorTests(unittest.TestCase):
         self.assertIn(": 180", text)
         self.assertIn("+ 1440", text)
 
+    def test_session_aod_center_uses_sync_to_device_current_time(self):
+        root = ET.fromstring(self.render(DEFAULT_SESSIONS))
+        center = [time for time in root.findall(".//TimeText")
+                  if time.find("Variant") is not None
+                  and time.find("Variant").get("value") == "[CONFIGURATION.aod] == 3 ? 255 : 0"]
+        self.assertEqual([(time.get("format"), time.get("hourFormat"), time.get("x"), time.get("y")) for time in center], [
+            ("hh", "SYNC_TO_DEVICE", "4", "64"),
+            ("mm", "SYNC_TO_DEVICE", "4", "222"),
+        ])
+
+    def test_session_aod_arc_formats_remaining_time_including_midnight_sleep(self):
+        rows, *formats = self.schedule([
+            {"name": "DAY", "start": "06:00", "end": "22:00"},
+            {"name": "SLEEP", "start": "22:00", "end": "06:00"},
+        ])
+        root = ET.fromstring(generator.render(generator.TEMPLATE.read_text(encoding="utf-8"), rows, *formats))
+        arc_templates = root.findall(".//PartText[@name='session_current_time_lower']/TextCircular/Font/Template")
+        arc_templates += root.findall(".//PartText[@name='session_current_time_upper']/TextCircular/Font/Template")
+        expected_sleep = generator.remaining_end(rows[-1])
+        self.assertIn("+ 1440", expected_sleep)
+        self.assertEqual(expected_sleep, "(1800 - (([HOUR_0_23] * 60 + [MINUTE]) < 1320 ? ([HOUR_0_23] * 60 + [MINUTE]) + 1440 : ([HOUR_0_23] * 60 + [MINUTE])))")
+        self.assertEqual(len(arc_templates), 2)
+        for template in arc_templates:
+            self.assertEqual(template.text, "%sh%sm")
+            expressions = [parameter.get("expression") for parameter in template]
+            self.assertEqual(len(expressions), 2)
+            self.assertTrue(expressions[0].startswith('numberFormat("00", floor('))
+            self.assertTrue(expressions[0].endswith(" / 60))"))
+            self.assertTrue(expressions[1].startswith('numberFormat("00", floor('))
+            self.assertTrue(expressions[1].endswith(" % 60))"))
+            self.assertIn("+ 1440", expressions[0])
+            self.assertIn("+ 1440", expressions[1])
+
     def test_duplicate_start_rejected_separately(self):
         rows = [
             {"name": "A", "start": "00:00", "end": "06:00"},
