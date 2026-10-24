@@ -35,6 +35,7 @@ python3 -m unittest tools/test_generate_watchface_sessions.py
 python3 -m unittest tools/test_generate_readme_config.py
 python3 tools/verify_font_mapping.py
 tools/validate_wff_v2.sh
+tools/verify.sh
 ```
 
 For one-time repository-local pre-commit checks (without changing global Git configuration):
@@ -44,6 +45,24 @@ git config core.hooksPath .githooks
 ```
 
 The official WFF validator uses a checksum-pinned Google watchface source cache under `${XDG_CACHE_HOME:-$HOME/.cache}`. It needs `curl`, `tar`, a POSIX shell, and Java 17 when rebuilding or downloading that cache. The validator source is Google’s Apache-2.0 [watchface repository](https://github.com/google/watchface), commit `44b1855d445686ac8de5dbc95003d6f8e6623643`; the downloaded codeload archive must match SHA-256 `d32b020cd7130b0d5d0a576878b452785b46c1c614642f4af55a937ef551ed4d`.
+
+### Emulator UAT
+
+`tools/uat.sh` builds and installs the real debug watch face on isolated Wear OS emulator AVDs matching the verified round-display geometry of Pixel Watch 3 41 mm (408×408), Pixel Watch 3 45 mm (456×456), and OnePlus Watch 4 (466×466). For each target it captures and checks:
+
+- the normal interactive face;
+- the default Dimmed AOD; and
+- the Session Countdown AOD (`aod=3`), including centered, unclipped countdown rows and date/session label.
+
+The harness installs a debug-only `UAT PERSONAL timer` complication provider and assigns it, plus Day & Date, through the system editor/picker. It also selects **Session Countdown** through the system watch-face editor using UIAutomator. This avoids unsupported direct mutation of WFF user configuration and does not alter release defaults or release output. Ambient screenshots are accepted only after device-side evidence contains `mWakefulness=Dozing`, display state `DOZE`, and `mAwake=false`.
+
+Run all devices and modes with a Wear OS 6 signed system image installed:
+
+```sh
+tools/uat.sh
+```
+
+Narrow a run with `--device`, `--mode`, or `--style`; use `tools/uat.sh --help` for values. Private screenshots, editor dumps, logs, and ambient-state proof are written under ignored `evidence/uat/`.
 
 See [LOCAL_ARCHITECTURE.md](LOCAL_ARCHITECTURE.md) for the optional local phone/watch bridge modules. The third-party [Phone Battery Complication](https://play.google.com/store/apps/details?id=com.weartools.phonebattcomp) is not bundled here.
 
