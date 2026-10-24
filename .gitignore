@@ -8,6 +8,7 @@ watchface/build
 signing.properties
 
 # Private runtime evidence and device data must never enter a public history.
+/artifacts/
 /evidence/
 *.log
 *.device-log
