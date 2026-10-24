@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+python3 -m unittest discover -s tools -p 'test_*.py'
+python3 tools/generate_watchface_sessions.py
+python3 tools/generate_watchface_sessions.py --check
+python3 tools/generate_readme_config.py --check
+python3 tools/verify_font_mapping.py
+tools/validate_wff_v2.sh
+python3 tools/feature_map.py --check
+bash ./gradlew test lintDebug assembleDebug
